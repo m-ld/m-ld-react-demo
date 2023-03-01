@@ -3,12 +3,17 @@ import { useSubject } from "../hooks/useSubject";
 
 // TODO: Stop cursor from jumping to end of text box.
 export const NameEditor = ({ resource }: { resource: string }) => {
-  // TODO: Find a type-friendly way to do this assignment.
-  const { "http://xmlns.com/foaf/0.1/name": name } = useSubject(resource) ?? {};
   const meld = useMeld();
+  const person = useSubject(resource);
 
+  // Loading...
+  if (!person || !meld) return <></>;
+
+  const { "http://xmlns.com/foaf/0.1/name": name } = person;
+
+  // Last-minute data validation. This would be better handled higher up,
+  // perhaps by validating the Person against a known shape.
   if (typeof name !== "string") return null;
-  if (!meld) return null;
 
   return (
     <input
