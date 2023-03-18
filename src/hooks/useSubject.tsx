@@ -6,6 +6,7 @@ import {
   updateSubject,
 } from "@m-ld/m-ld";
 import { useMeld } from "../hooks/useMeld";
+import { Observable } from "rxjs";
 
 export const useSubject = (id: string) => {
   const meld = useMeld();
@@ -17,17 +18,28 @@ export const useSubject = (id: string) => {
         async (state) => {
           setData(await state.get(id));
         },
-        async (update) => {
+        async (update, state) => {
+          const newData = await state.get(id);
+          validate(shape, newData);
+          setData(newData);
+
           // TODO: This may be an expensive way to find out if there's a relevant update.
           const subjectUpdates = asSubjectUpdates(update);
-          if (subjectUpdates[id]) {
+          if (updateRelevantTo(update, id)) {
             setData(
-              (prevData) =>
-                prevData && updateSubject({ ...prevData }, subjectUpdates)
+              (prevData) => prevData && updateSubject({ ...prevData }, update)
             );
           }
         }
       );
+
+      // declare const differentMeld: {
+      //   updates: Observable<unknown>;
+      // };
+
+      // const subscription = differentMeld.updates.subscribe((update) => {
+      //   const filtered = update.match(theSubject, thePredicate);
+      // });
 
       return () => {
         subscription.unsubscribe();

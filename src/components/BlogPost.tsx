@@ -1,14 +1,18 @@
 import { useSubject } from "../hooks/useSubject";
 
 export const BlogPost = ({ resource }: { resource: string }) => {
+  const blogPost = useMeldData(BlogPostingShape, resource);
+
+  if (!blogPost) return <>Loading...</>;
+
   const {
     "http://purl.org/dc/terms/title": title,
     "http://purl.org/dc/terms/creator": creator,
     "http://schema.org/text": text,
-  } = useSubject(resource) ?? {};
+  } = blogPost;
 
-  const { "http://xmlns.com/foaf/0.1/name": creatorName } =
-    useSubject(creator?.["@id"]) ?? {};
+  // const { "http://xmlns.com/foaf/0.1/name": creatorName } =
+  //   useSubject(creator?.["@id"]) ?? {};
 
   return (
     <article>

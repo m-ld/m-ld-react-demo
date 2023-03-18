@@ -33,20 +33,15 @@ export default function Home() {
   const [meld, setMeld] = useState<MeldClone>();
 
   useEffect(() => {
-    const clonePromise = clone(new MemoryLevel(), NullRemotes, {
+    const promise = clone(new MemoryLevel(), NullRemotes, {
       "@id": uuid(),
       "@domain": "test.example.org",
       genesis: true,
       logLevel: "INFO",
-    });
-
-    const writtenPromise = clonePromise.then(async (newMeld) => {
+    }).then(async (newMeld) => {
       await newMeld.write(blogPostingData);
-      return newMeld;
-    });
-
-    writtenPromise.then((newMeld) => {
       setMeld(newMeld);
+      return newMeld;
     });
 
     return () => {
@@ -55,7 +50,7 @@ export default function Home() {
       // its back. This may represent a bug in m-ld.
       //
       // To reproduce, replace writtenPromise below with clonePromise.
-      writtenPromise.then((newMeld) => {
+      promise.then((newMeld) => {
         newMeld.close();
       });
     };
