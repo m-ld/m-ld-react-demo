@@ -1,10 +1,13 @@
-import "@/styles/globals.css";
 import type { AppProps } from "next/app";
+import Head from "next/head";
 import { MeldProvider } from "../hooks/useMeld";
 import { useEffect, useState } from "react";
 import { clone, MeldClone, uuid } from "@m-ld/m-ld";
 import { MemoryLevel } from "memory-level";
 import { NullRemotes } from "@/NullRemotes";
+
+import "todomvc-common/base.css";
+import "todomvc-app-css/index.css";
 
 const blogPostingData = {
   "@context": {
@@ -60,7 +63,22 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
   return (
     <MeldProvider value={meld}>
-      <Component {...pageProps} />
+      <Head>
+        <title>React / m-ld • TodoMVC</title>
+      </Head>
+
+      <section className="todoapp">
+        <Component {...pageProps} />
+      </section>
+      <footer className="info">
+        <p>Double-click to edit a todo</p>
+        <p>
+          Created by <a href="http://github.com/Peeja/">Petra Jaros</a>
+        </p>
+        <p>
+          Part of <a href="http://todomvc.com">TodoMVC</a>
+        </p>
+      </footer>
     </MeldProvider>
   );
 }
