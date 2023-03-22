@@ -1,3 +1,4 @@
+import { useSubject } from "@/hooks/useSubject";
 import classNames from "classnames";
 
 const ALL_TODOS = "all";
@@ -28,38 +29,36 @@ interface ITodoItemProps {
   onToggle: () => void;
 }
 
-const TodoItem = (props: ITodoItemProps) => {
-  return (
-    <li
-      className={classNames({
-        completed: props.todo.completed,
-        editing: props.editing,
-      })}
-    >
-      <div className="view">
-        <input
-          className="toggle"
-          type="checkbox"
-          checked={props.todo.completed}
-          onChange={props.onToggle}
-        />
-        <label
-        // onDoubleClick={(e) => this.handleEdit()}
-        >
-          {props.todo.title}
-        </label>
-        <button className="destroy" onClick={props.onDestroy} />
-      </div>
+const TodoItem = (props: ITodoItemProps) => (
+  <li
+    className={classNames({
+      completed: props.todo.completed,
+      editing: props.editing,
+    })}
+  >
+    <div className="view">
       <input
-        className="edit"
-        // value={this.state.editText}
-        // onBlur={(e) => this.handleSubmit(e)}
-        // onChange={(e) => this.handleChange(e)}
-        // onKeyDown={(e) => this.handleKeyDown(e)}
+        className="toggle"
+        type="checkbox"
+        checked={props.todo.completed}
+        onChange={props.onToggle}
       />
-    </li>
-  );
-};
+      <label
+      // onDoubleClick={(e) => this.handleEdit()}
+      >
+        {props.todo.title}
+      </label>
+      <button className="destroy" onClick={props.onDestroy} />
+    </div>
+    <input
+      className="edit"
+      // value={this.state.editText}
+      // onBlur={(e) => this.handleSubmit(e)}
+      // onChange={(e) => this.handleChange(e)}
+      // onKeyDown={(e) => this.handleKeyDown(e)}
+    />
+  </li>
+);
 
 interface ITodoFooterProps {
   completedCount: number;
@@ -68,79 +67,57 @@ interface ITodoFooterProps {
   count: number;
 }
 
-const TodoFooter = (props: ITodoFooterProps) => {
-  var activeTodoWord = props.count == 1 ? "item" : "items";
-  var clearButton = null;
-
-  if (props.completedCount > 0) {
-    clearButton = (
-      <button className="clear-completed" onClick={props.onClearCompleted}>
+const TodoFooter = ({
+  completedCount,
+  onClearCompleted,
+  nowShowing,
+  count,
+}: ITodoFooterProps) => (
+  <footer className="footer">
+    <span className="todo-count">
+      <strong>{count}</strong> {count == 1 ? "item" : "items"} left
+    </span>
+    <ul className="filters">
+      <li>
+        <a
+          href="#/"
+          className={classNames({ selected: nowShowing === ALL_TODOS })}
+        >
+          All
+        </a>
+      </li>{" "}
+      <li>
+        <a
+          href="#/active"
+          className={classNames({ selected: nowShowing === ACTIVE_TODOS })}
+        >
+          Active
+        </a>
+      </li>{" "}
+      <li>
+        <a
+          href="#/completed"
+          className={classNames({ selected: nowShowing === COMPLETED_TODOS })}
+        >
+          Completed
+        </a>
+      </li>
+    </ul>
+    {!!completedCount && (
+      <button className="clear-completed" onClick={onClearCompleted}>
         Clear completed
       </button>
-    );
-  }
-
-  const nowShowing = props.nowShowing;
-  return (
-    <footer className="footer">
-      <span className="todo-count">
-        <strong>{props.count}</strong> {activeTodoWord} left
-      </span>
-      <ul className="filters">
-        <li>
-          <a
-            href="#/"
-            className={classNames({ selected: nowShowing === ALL_TODOS })}
-          >
-            All
-          </a>
-        </li>{" "}
-        <li>
-          <a
-            href="#/active"
-            className={classNames({ selected: nowShowing === ACTIVE_TODOS })}
-          >
-            Active
-          </a>
-        </li>{" "}
-        <li>
-          <a
-            href="#/completed"
-            className={classNames({ selected: nowShowing === COMPLETED_TODOS })}
-          >
-            Completed
-          </a>
-        </li>
-      </ul>
-      {clearButton}
-    </footer>
-  );
-};
+    )}
+  </footer>
+);
 
 export default function Home() {
-  const nowShowing: string = ACTIVE_TODOS;
-
-  var footer;
-  var main;
+  const nowShowing: string = ALL_TODOS;
 
   const todos = TODOS;
 
-  var activeTodoCount = todos.reduce(function (accum, todo) {
-    return todo.completed ? accum : accum + 1;
-  }, 0);
-
+  var activeTodoCount = todos.filter((todo) => todo.completed).length;
   var completedCount = todos.length - activeTodoCount;
-
-  if (activeTodoCount || completedCount) {
-    footer = (
-      <TodoFooter
-        count={activeTodoCount}
-        completedCount={completedCount}
-        nowShowing={nowShowing}
-        // onClearCompleted={(e) => this.clearCompleted()}
-      />
-    );
-  }
 
   var shownTodos = todos.filter((todo) => {
     switch (nowShowing) {
@@ -153,53 +130,43 @@ export default function Home() {
     }
   });
 
-  var todoItems = shownTodos.map((todo) => {
-    return (
-      <TodoItem
-        key={todo.id}
-        todo={todo}
-        // onToggle={this.toggle.bind(this, todo)}
-        // onDestroy={this.destroy.bind(this, todo)}
-        // onEdit={this.edit.bind(this, todo)}
-        // editing={this.state.editing === todo.id}
-        // onSave={this.save.bind(this, todo)}
-        // onCancel={(e) => this.cancel()}
-      />
-    );
-  });
-
-  if (todos.length) {
-    main = (
-      <section className="main">
-        <input
-          id="toggle-all"
-          className="toggle-all"
-          type="checkbox"
-          // onChange={(e) => this.toggleAll(e)}
-          checked={activeTodoCount === 0}
-        />
-        <label htmlFor="toggle-all">Mark all as complete</label>
-        <ul className="todo-list">{todoItems}</ul>
-      </section>
-    );
-  }
-
   return (
-    <>
-      <div>
-        <header className="header">
-          <h1>todos</h1>
+    <div>
+      <header className="header">
+        <h1>todos</h1>
+        <input
+          className="new-todo"
+          placeholder="What needs to be done?"
+          // onKeyDown={(e) => this.handleNewTodoKeyDown(e)}
+          autoFocus={true}
+        />
+      </header>
+      {!!todos.length && (
+        <section className="main">
           <input
-            className="new-todo"
-            placeholder="What needs to be done?"
-            // onKeyDown={(e) => this.handleNewTodoKeyDown(e)}
-            autoFocus={true}
+            id="toggle-all"
+            className="toggle-all"
+            type="checkbox"
+            // onChange={(e) => this.toggleAll(e)}
+            checked={activeTodoCount === 0}
           />
-        </header>
-        {main}
-        {footer}
-      </div>
-      {/* <MeldDebug /> */}
-    </>
+          <label htmlFor="toggle-all">Mark all as complete</label>
+          <ul className="todo-list">
+            {shownTodos.map((todo) => (
+              <TodoItem key={todo.id} todo={todo} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!!(activeTodoCount || completedCount) && (
+        <TodoFooter
+          count={activeTodoCount}
+          completedCount={completedCount}
+          nowShowing={nowShowing}
+          // onClearCompleted={(e) => this.clearCompleted()}f
+        />
+      )}
+    </div>
   );
 }
