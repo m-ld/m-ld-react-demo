@@ -5,7 +5,11 @@ import N3 from "n3";
 import { useMeld } from "../hooks/useMeld";
 
 // TODO: Stop momentary double-display.
-export const MeldDebug = () => {
+export const MeldDebug = ({
+  prefixes,
+}: {
+  prefixes?: N3.WriterOptions["prefixes"];
+}) => {
   const meld = useMeld();
   const [stream, setStream] = useState<Stream<Quad>>();
   const [turtle, setTurtle] = useState("");
@@ -14,17 +18,30 @@ export const MeldDebug = () => {
     setTurtle("");
 
     if (stream) {
-      const streamWriter = new N3.StreamWriter();
+      const streamWriter = new N3.StreamWriter({ prefixes });
       streamWriter.on("data", (data: string) => {
         setTurtle((prevTurtle) => prevTurtle + data);
       });
-      streamWriter.import(stream);
+
+      const loggingStream: typeof stream = Object.create(stream);
+      loggingStream.on = (eventName, listener) => {
+        if (eventName === "data") {
+          return stream.on(eventName, (data) => {
+            console.log(data.subject);
+            listener(data);
+          });
+        } else {
+          return stream.on(eventName, listener);
+        }
+      };
+
+      streamWriter.import(loggingStream);
 
       return () => {
         streamWriter.destroy();
       };
     }
-  }, [stream]);
+  }, [prefixes, stream]);
 
   useEffect(() => {
     if (meld) {
