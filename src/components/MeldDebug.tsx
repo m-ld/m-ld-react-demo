@@ -4,6 +4,39 @@ import { MeldReadState } from "@m-ld/m-ld";
 import N3 from "n3";
 import { useMeld } from "../hooks/useMeld";
 
+const StreamedStringDisplay = ({
+  prefixes,
+  stream,
+  streamId,
+}: {
+  prefixes?: N3.WriterOptions["prefixes"];
+  stream: Stream<Quad>;
+  streamId: number | undefined;
+}) => {
+  const [totalString, setTotalString] = useState("");
+
+  useEffect(() => {
+    // if (!stream) return;
+    const streamWriter = new N3.StreamWriter({ prefixes });
+    streamWriter.on("data", (data: string) => {
+      console.log(streamId, data);
+      setTotalString((prevTotalString) => prevTotalString + data);
+    });
+
+    // console.log(stream);
+
+    streamWriter.import(stream);
+
+    return () => {
+      // console.log("destroying");
+      // setTotalString("");
+      streamWriter.destroy();
+    };
+  }, [prefixes, stream]);
+
+  return <pre>{totalString}</pre>;
+};
+
 // TODO: Stop momentary double-display.
 export const MeldDebug = ({
   prefixes,
@@ -12,57 +45,38 @@ export const MeldDebug = ({
 }) => {
   const meld = useMeld();
   const [stream, setStream] = useState<Stream<Quad>>();
-  const [turtle, setTurtle] = useState("");
+  const [streamId, setStreamId] = useState<number>();
 
   useEffect(() => {
-    setTurtle("");
+    if (!meld) return;
 
-    if (stream) {
-      const streamWriter = new N3.StreamWriter({ prefixes });
-      streamWriter.on("data", (data: string) => {
-        setTurtle((prevTurtle) => prevTurtle + data);
-      });
+    const streamQuads = (state: MeldReadState) => {
+      setStream(state.match());
+      setStreamId(Math.random);
+    };
 
-      const loggingStream: typeof stream = Object.create(stream);
-      loggingStream.on = (eventName, listener) => {
-        if (eventName === "data") {
-          return stream.on(eventName, (data) => {
-            console.log(data.subject);
-            listener(data);
-          });
-        } else {
-          return stream.on(eventName, listener);
-        }
-      };
+    const subscription = meld.read(
+      async (state) => {
+        streamQuads(state);
+      },
+      async (update, state) => {
+        streamQuads(state);
+      }
+    );
 
-      streamWriter.import(loggingStream);
-
-      return () => {
-        streamWriter.destroy();
-      };
-    }
-  }, [prefixes, stream]);
-
-  useEffect(() => {
-    if (meld) {
-      const streamQuads = (state: MeldReadState) => {
-        setStream(state.match());
-      };
-
-      const subscription = meld.read(
-        async (state) => {
-          streamQuads(state);
-        },
-        async (update, state) => {
-          streamQuads(state);
-        }
-      );
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [meld]);
 
-  return <pre>{turtle}</pre>;
+  return (
+    stream && (
+      <StreamedStringDisplay
+        prefixes={prefixes}
+        stream={stream}
+        streamId={streamId}
+        key={streamId}
+      />
+    )
+  );
 };
