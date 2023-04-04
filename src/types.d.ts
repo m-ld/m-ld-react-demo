@@ -8,14 +8,14 @@ declare module "@graphy/memory.dataset.fast" {
 // TODO: Package and push upstream to "@types/jsonld".
 declare module "jsonld" {
   import { Quad } from "@rdfjs/types";
-  // import {
-  //   Frame,
-  //   Url,
-  //   JsonLdProcessor,
-  //   RemoteDocument,
-  //   JsonLdObj,
-  //   JsonLdArray,
-  // } from "./jsonld-spec";
+  import {
+    Frame,
+    // Url,
+    // JsonLdProcessor,
+    // RemoteDocument,
+    // JsonLdObj,
+    // JsonLdArray,
+  } from "jsonld/jsonld-spec";
   // import { JsonLdDocument, ContextDefinition } from "./jsonld";
   export * from "jsonld/jsonld";
   // // Some typealiases for better readability and some placeholders
@@ -164,6 +164,8 @@ declare module "jsonld" {
 }
 
 declare module "jsonld/jsonld" {
+  // TODO: Most or all of the `| undefined`s can probably go. They were
+  // mass-added by the DefinitelyTyped project.
   /*
    * Types from the jsonld Specification:
    * https://www.w3.org/TR/json-ld11/
@@ -180,15 +182,10 @@ declare module "jsonld/jsonld" {
    * A JSON-LD document MUST be valid JSON text as described in [RFC8259],
    * or some format that can be represented in the JSON-LD internal representation
    * that is equivalent to valid JSON text.
+   * @see https://www.w3.org/TR/json-ld11/#dfn-json-ld-document
    * @see https://www.w3.org/TR/json-ld11/#json-ld-grammar
    */
-  export type JsonLdDocument =
-    | NodeObject
-    | NodeObject[]
-    | {
-        "@context"?: Keyword["@context"] | undefined;
-        "@graph"?: Keyword["@graph"] | undefined;
-      };
+  export type JsonLdDocument = NodeObject | NodeObject[];
 
   /**
    * A node object represents zero or more properties of a node
@@ -196,14 +193,14 @@ declare module "jsonld/jsonld" {
    * @see https://www.w3.org/TR/json-ld11/#node-objects
    */
   export interface NodeObject {
-    "@context"?: Keyword["@context"] | undefined;
-    "@id"?: Keyword["@id"] | undefined;
-    "@included"?: Keyword["@included"] | undefined;
-    "@graph"?: OrArray<NodeObject> | undefined;
-    "@nest"?: OrArray<JsonObject> | undefined;
-    "@type"?: OrArray<Keyword["@type"]> | undefined;
-    "@reverse"?: { [key: string]: Keyword["@reverse"] } | undefined;
-    "@index"?: Keyword["@index"] | undefined;
+    "@context"?: Keyword["@context"];
+    "@id"?: Keyword["@id"];
+    "@included"?: Keyword["@included"];
+    "@graph"?: Keyword["@included"];
+    "@nest"?: OrArray<JsonObject>;
+    "@type"?: OrArray<Keyword["@type"]>;
+    "@reverse"?: { [key: string]: Keyword["@reverse"] };
+    "@index"?: Keyword["@index"];
     [key: string]:
       | OrArray<
           | null
@@ -230,9 +227,9 @@ declare module "jsonld/jsonld" {
    */
   export interface GraphObject {
     "@graph": OrArray<NodeObject>;
-    "@index"?: Keyword["@index"] | undefined;
-    "@id"?: Keyword["@id"] | undefined;
-    "@context"?: Keyword["@context"] | undefined;
+    "@index"?: Keyword["@index"];
+    "@id"?: Keyword["@id"];
+    "@context"?: Keyword["@context"];
   }
 
   /**
@@ -243,16 +240,18 @@ declare module "jsonld/jsonld" {
   export type ValueObject = {
     "@index"?: Keyword["@index"] | undefined;
     "@context"?: Keyword["@context"] | undefined;
-  } & (
+  } & ( // A string, possibly a language-typed string
     | {
         "@value": Keyword["@value"];
         "@language"?: Keyword["@language"] | undefined;
         "@direction"?: Keyword["@direction"] | undefined;
       }
+    // A typed value
     | {
         "@value": Keyword["@value"];
         "@type": Keyword["@type"];
       }
+    // A JSON literal
     | {
         "@value": Keyword["@value"] | JsonObject | JsonArray;
         "@type": "@json";
@@ -392,7 +391,7 @@ declare module "jsonld/jsonld" {
       | null;
     "@context": OrArray<null | string | ContextDefinition>;
     "@direction": "ltr" | "rtl" | null;
-    "@graph": OrArray<ValueObject | NodeObject>;
+    "@graph": OrArray<NodeObject>;
     "@id": OrArray<string>;
     "@import": string;
     "@included": IncludedBlock;
@@ -445,4 +444,50 @@ declare module "jsonld/jsonld" {
     [key: string]: JsonValue | undefined;
   }
   type JsonValue = JsonPrimitive | JsonArray | JsonObject;
+}
+
+declare module "jsonld/jsonld-spec" {
+  /*
+   * Types from the jsonld Specification:
+   * https://www.w3.org/TR/json-ld-api/
+   *
+   */
+  import { JsonLdDocument, NodeObject, ContextDefinition } from "jsonld";
+
+  type DOMString = string;
+  type LoadDocumentCallback = (url: Url) => Promise<RemoteDocument>;
+
+  export type Url = DOMString;
+  export type Iri = Url;
+  export type Frame = NodeObject | Url;
+
+  export interface Options {
+    base?: DOMString | null | undefined;
+    compactArrays?: boolean | undefined;
+    documentLoader?: LoadDocumentCallback | null | undefined;
+    expandContext?: ContextDefinition | null | undefined;
+    processingMode?: DOMString | undefined;
+  }
+
+  export interface JsonLdProcessor {
+    compact(
+      input: JsonLdDocument,
+      context: ContextDefinition,
+      options?: Options
+    ): Promise<NodeObject>;
+    expand(input: JsonLdDocument, options?: Options): Promise<NodeObject[]>;
+    flatten(
+      input: JsonLdDocument,
+      context?: ContextDefinition | null,
+      options?: Options
+    ): Promise<NodeObject>;
+  }
+
+  export interface RemoteDocument {
+    contextUrl?: Url | undefined;
+    documentUrl: Url;
+    document: JsonLdDocument;
+  }
+
+  export {};
 }

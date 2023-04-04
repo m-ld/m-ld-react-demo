@@ -1,4 +1,4 @@
-import { JsonLdDocument, frame, toRDF, fromRDF } from "jsonld";
+import { JsonLdDocument, frame, toRDF, fromRDF, NodeObject } from "jsonld";
 import dataset from "@graphy/memory.dataset.fast";
 import { Dataset, Quad, Stream, Term } from "@rdfjs/types";
 
@@ -9,7 +9,7 @@ import { Dataset, Quad, Stream, Term } from "@rdfjs/types";
 const wildcarded = (term: Term) =>
   term.termType === "BlankNode" ? null : term;
 
-const query = async (input: JsonLdDocument, frameDocument: JsonLdDocument) => {
+const query = async (input: JsonLdDocument, frameDocument: NodeObject) => {
   const frameRdf = await toRDF(frameDocument);
   const inputRdf = await toRDF(input);
   const inputDataset = dataset().addAll(inputRdf);
@@ -31,10 +31,8 @@ const query = async (input: JsonLdDocument, frameDocument: JsonLdDocument) => {
   return fromRDF(outputDataset);
 };
 
-const frameQuery = async (
-  input: JsonLdDocument,
-  frameDocument: JsonLdDocument
-) => frame(await query(input, frameDocument), frameDocument);
+const frameQuery = async (input: JsonLdDocument, frameDocument: NodeObject) =>
+  frame(await query(input, frameDocument), frameDocument);
 
 const context = {
   dcterms: "http://purl.org/dc/terms/",
