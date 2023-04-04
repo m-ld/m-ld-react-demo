@@ -1,5 +1,13 @@
-import { useSubject } from "@/hooks/useSubject";
+import { useMeld } from "@/hooks/useMeld";
+import { Construct, MeldReadState } from "@m-ld/m-ld";
 import classNames from "classnames";
+import { compact } from "jsonld";
+import { useEffect, useState } from "react";
+import { useDeepCompareMemoize } from "use-deep-compare-effect";
+import { toSparql } from "json-rql-sparql";
+import { Algebra, Factory as SparqlFactory, translate } from "sparqlalgebrajs";
+import { RdfDataFactory } from "rdf-data-factory";
+import { Quad } from "@rdfjs/types";
 
 const ALL_TODOS = "all";
 const ACTIVE_TODOS = "active";
@@ -111,15 +119,133 @@ const TodoFooter = ({
   </footer>
 );
 
+function useQuery(query) {
+  const meld = useMeld();
+  const [data, setData] = useState<{}>();
+
+  const memoQuery = useDeepCompareMemoize(query);
+
+  // Deep compare the query, so that the client component can safely use an
+  // object literal for the query, which will create a new (even if identical)
+  // object on every render.
+  useEffect(() => {
+    if (!meld || !memoQuery) {
+      setData(undefined);
+    } else {
+      const doRead = async (state: MeldReadState) => {
+        // toSparql(
+        //   {
+        //     "@construct": [
+        //       {
+        //         "@id": "todoMVCList",
+        //         // BOOKMARK: Why can't I query for ?a like this?
+        //         // "http://todomvc.com/vocab/items": { "@id": "?a" },
+        //       },
+        //     ],
+        //   },
+        //   (err, sparql, parsed) => console.log("toSparql:", err, sparql, parsed)
+        // );
+
+        console.log(
+          await state.read<Construct>({
+            "@construct": [
+              {
+                "@id": "todoMVCList",
+                // BOOKMARK: Why can't I query for ?a like this?
+                // "http://todomvc.com/vocab/items": { "@id": "?a" },
+              },
+            ],
+          })
+        );
+
+        console.log(
+          translate(
+            "CONSTRUCT { <ex:foo> a ?bar } WHERE { <ex:foo> a <ex:bar> }"
+          )
+        );
+
+        const sparql = new SparqlFactory();
+
+        const patterns = [
+          sparql.createPattern(
+            sparql.dataFactory.variable!("foo"),
+            sparql.dataFactory.namedNode(
+              "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+            ),
+            sparql.dataFactory.variable!("bar")
+          ),
+        ];
+
+        const q: Algebra.Construct = sparql.createConstruct(
+          sparql.createBgp(patterns),
+          patterns
+        );
+
+        const quads: Quad[] = [];
+        meld
+          .query(q)
+          .on("data", (quad) => {
+            console.log(quad);
+            quads.push(quad);
+          })
+          .on("end", () => {
+            console.log(quads);
+          });
+
+        // const expandedQuery = await expand(memoQuery);
+        // console.log(expandedQuery[0]);
+        const compactedQuery = await compact(memoQuery, {});
+        console.log(compactedQuery);
+        const result = await state.read<Construct>({
+          "@construct": compactedQuery,
+        });
+        console.log(result);
+        const compactedResult = await compact(result, memoQuery["@context"]);
+        setData(compactedResult);
+      };
+
+      const subscription = meld.read(doRead, async (_update, state) => {
+        doRead(state);
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [memoQuery, meld]);
+
+  return data;
+}
+
 export default function Home() {
   const nowShowing: string = ALL_TODOS;
 
-  const todos = TODOS;
+  const data = useQuery({
+    "@context": {
+      "@vocab": "http://todomvc.com/vocab/",
+      ical: "http://www.w3.org/2002/12/cal/icaltzd#",
+    },
+    "@id": "todoMVCList",
+    items: {
+      "@id": "?a",
+      "ical:status": "?b",
+    },
+  });
 
-  var activeTodoCount = todos.filter((todo) => todo.completed).length;
-  var completedCount = todos.length - activeTodoCount;
+  if (!data) return;
 
-  var shownTodos = todos.filter((todo) => {
+  console.log(data);
+
+  // const data = useSubject(items) ?? {};
+
+  const todos: ITodo[] | undefined = data["@list"];
+  console.log(todos);
+  if (!todos) return;
+
+  const activeTodoCount = todos.filter((todo) => todo.completed).length;
+  const completedCount = todos.length - activeTodoCount;
+
+  const shownTodos = todos.filter((todo) => {
     switch (nowShowing) {
       case ACTIVE_TODOS:
         return !todo.completed;

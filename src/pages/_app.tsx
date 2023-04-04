@@ -14,12 +14,12 @@ import { MeldDebug } from "@/components/MeldDebug";
 const initialDataPromise = compact(
   {
     "@context": {
-      "@vocab": "https://todomvc.com/vocab/",
-      icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+      "@vocab": "http://todomvc.com/vocab/",
+      ical: "http://www.w3.org/2002/12/cal/icaltzd#",
       items: {
         "@container": "@list",
       },
-      "icaltzd:Vtodo": {
+      "ical:Vtodo": {
         "@context": {
           "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
         },
@@ -29,13 +29,13 @@ const initialDataPromise = compact(
     "@type": "TodoList",
     items: [
       {
-        "@type": "icaltzd:Vtodo",
+        "@type": "ical:Vtodo",
         status: "COMPLETED",
         summary: "Taste JavaScript",
         uid: "DB2CCFFD-1B37-4CA4-81B9-D724DFB70BA8",
       },
       {
-        "@type": "icaltzd:Vtodo",
+        "@type": "ical:Vtodo",
         status: "IN-PROCESS",
         summary: "Buy Unicorn",
         uid: "401BFC3D-7C9B-46CC-A842-6D7C91BFD7EC",
@@ -101,8 +101,8 @@ export default function App({ Component, pageProps }: AppProps) {
       <MeldDebug
         prefixes={{
           "m-ld": "http://m-ld.org/",
-          todomvc: "https://todomvc.com/vocab/",
-          icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+          todomvc: "http://todomvc.com/vocab/",
+          ical: "http://www.w3.org/2002/12/cal/icaltzd#",
           _: "http://m-ld-react.todomvc.com/.well-known/genid/",
           "": "http://m-ld-react.todomvc.com/",
         }}

@@ -11,6 +11,7 @@ describe("New null remotes", () => {
       "@id": uuid(),
       "@domain": "test.example.org",
       genesis: true,
+      logLevel: "SILENT",
     });
 
     meld.write(async (state) => {
@@ -32,6 +33,7 @@ describe("New null remotes", () => {
       "@id": uuid(),
       "@domain": "test.example.org",
       genesis: true,
+      logLevel: "SILENT",
     });
 
     const update$ = new Observable<MeldUpdate>((subscriber) =>

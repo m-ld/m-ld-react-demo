@@ -6,13 +6,26 @@ import {
   updateSubject,
 } from "@m-ld/m-ld";
 import { useMeld } from "../hooks/useMeld";
+import { Iri } from "@m-ld/jsonld/jsonld-spec";
 
-export const useSubject = (id: string) => {
+// null or undefined means "skip"
+export const useSubject = (
+  subjectReference: Iri | Reference | null | undefined
+) => {
   const meld = useMeld();
   const [data, setData] = useState<Subject & Reference>();
 
+  const id =
+    subjectReference === null || typeof subjectReference === "undefined"
+      ? null
+      : typeof subjectReference === "string"
+      ? subjectReference
+      : subjectReference["@id"];
+
   useEffect(() => {
-    if (meld) {
+    if (!meld || !id) {
+      setData(undefined);
+    } else {
       const subscription = meld.read(
         async (state) => {
           setData(await state.get(id));
@@ -33,7 +46,7 @@ export const useSubject = (id: string) => {
         subscription.unsubscribe();
       };
     }
-  }, [meld, id]);
+  }, [id, meld]);
 
   return data;
 };
