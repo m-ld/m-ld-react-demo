@@ -1,6 +1,40 @@
 declare module "@graphy/memory.dataset.fast" {
   import { Dataset } from "@rdfjs/types";
-  export default function dataset(): Dataset;
+  import { Duplex } from "node:stream";
+
+  class FastDataset<
+    OutQuad extends BaseQuad = Quad,
+    InQuad extends BaseQuad = OutQuad
+  > extends Duplex {}
+
+  // The methods on Dataset which return new datasets (rather than mutating the
+  // current one) are only specified to return objects which conform to Dataset.
+  // FastDataset's implementation specifically returns more FastDatasets. In
+  // particular, that means the returned datasets can be used as Duplex
+  // (readable and writable) streams. These typings tell TypeScript about that.
+  interface FastDataset extends Dataset<OutQuad, InQuad> {
+    difference(other: Dataset<InQuad>): this;
+
+    filter(iteratee: (quad: OutQuad, dataset: this) => boolean): this;
+
+    intersection(other: Dataset<InQuad>): this;
+
+    map(iteratee: (quad: OutQuad, dataset: Dataset<OutQuad>) => OutQuad): this;
+
+    union(quads: Dataset<InQuad>): this;
+
+    match(
+      subject?: Term | null,
+      predicate?: Term | null,
+      object?: Term | null,
+      graph?: Term | null
+    ): this;
+  }
+
+  export default function dataset<
+    OutQuad extends BaseQuad = Quad,
+    InQuad extends BaseQuad = OutQuad
+  >(): FastDataset<OutQuad, InQuad>;
 }
 
 // Because the DefinitelyTyped definitions are way out of date:
@@ -18,72 +52,98 @@ declare module "jsonld" {
   } from "jsonld/jsonld-spec";
   // import { JsonLdDocument, ContextDefinition } from "./jsonld";
   export * from "jsonld/jsonld";
-  // // Some typealiases for better readability and some placeholders
-  // type MimeNQuad = "application/n-quads";
+  /**
+   * Format option: Serialized as N-Quads.
+   * @see https://www.w3.org/TR/n-quads/
+   */
+  type MimeNQuad = "application/n-quads" | "application/nquads";
   // type Callback<T> = (err: Error, res: T) => void;
   // /*
   //  * Declares interfaces used to type the methods options object.
   //  * The interfaces are usefull to avoid code replication.
   //  */
-  // export namespace Options {
-  //   interface DocLoader {
-  //     documentLoader?:
-  //       | ((
-  //           url: Url,
-  //           callback: (err: Error, remoteDoc: RemoteDocument) => void
-  //         ) => Promise<RemoteDocument>)
-  //       | undefined;
-  //   }
-  //   interface Common extends DocLoader {
-  //     base?: string | undefined;
-  //     expandContext?: ContextDefinition | undefined;
-  //   }
-  //   interface ExpMap {
-  //     // TODO: Figure out type of info
-  //     expansionMap?: ((info: any) => any) | undefined;
-  //   }
-  //   interface Compact extends Common, ExpMap {
-  //     compactArrays?: boolean | undefined;
-  //     appropriate?: boolean | undefined;
-  //     compactToRelative?: boolean | undefined;
-  //     graph?: boolean | undefined;
-  //     skipExpansion?: boolean | undefined;
-  //     expansion?: boolean | undefined;
-  //     framing?: boolean | undefined;
-  //     // TODO: Figure out type of info
-  //     compactionMap?: ((info: any) => void) | undefined;
-  //   }
-  //   interface Expand extends Common, ExpMap {
-  //     keepFreeFloatingNodes?: boolean | undefined;
-  //   }
-  //   type Flatten = Common;
-  //   interface Frame {
-  //     embed?: "@last" | "@always" | "@never" | "@link" | undefined;
-  //     explicit?: boolean | undefined;
-  //     requireAll?: boolean | undefined;
-  //     omitDefault?: boolean | undefined;
-  //     omitGraph?: boolean | undefined;
-  //   }
-  //   interface Normalize extends Common {
-  //     algorithm?: "URDNA2015" | `URGNA2012` | undefined;
-  //     skipExpansion?: boolean | undefined;
-  //     expansion?: boolean | undefined;
-  //     inputFormat?: MimeNQuad | undefined;
-  //     format?: MimeNQuad | undefined;
-  //     useNative?: boolean | undefined;
-  //   }
-  //   interface FromRdf {
-  //     format?: MimeNQuad | undefined;
-  //     rdfParser?: any;
-  //     useRdfType?: boolean | undefined;
-  //     useNativeTypes?: boolean | undefined;
-  //   }
-  //   interface ToRdf extends Common {
-  //     skipExpansion?: boolean | undefined;
-  //     format?: MimeNQuad | undefined;
-  //     produceGeneralizedRdf?: boolean | undefined;
-  //   }
-  // }
+  export namespace Options {
+    interface DocLoader {
+      documentLoader?:
+        | ((
+            url: Url,
+            callback: (err: Error, remoteDoc: RemoteDocument) => void
+          ) => Promise<RemoteDocument>)
+        | undefined;
+    }
+    interface Common extends DocLoader {
+      base?: string | undefined;
+      expandContext?: ContextDefinition | undefined;
+    }
+    //   interface ExpMap {
+    //     // TODO: Figure out type of info
+    //     expansionMap?: ((info: any) => any) | undefined;
+    //   }
+    //   interface Compact extends Common, ExpMap {
+    //     compactArrays?: boolean | undefined;
+    //     appropriate?: boolean | undefined;
+    //     compactToRelative?: boolean | undefined;
+    //     graph?: boolean | undefined;
+    //     skipExpansion?: boolean | undefined;
+    //     expansion?: boolean | undefined;
+    //     framing?: boolean | undefined;
+    //     // TODO: Figure out type of info
+    //     compactionMap?: ((info: any) => void) | undefined;
+    //   }
+    //   interface Expand extends Common, ExpMap {
+    //     keepFreeFloatingNodes?: boolean | undefined;
+    //   }
+    //   type Flatten = Common;
+    //   interface Frame {
+    //     embed?: "@last" | "@always" | "@never" | "@link" | undefined;
+    //     explicit?: boolean | undefined;
+    //     requireAll?: boolean | undefined;
+    //     omitDefault?: boolean | undefined;
+    //     omitGraph?: boolean | undefined;
+    //   }
+    //   interface Normalize extends Common {
+    //     algorithm?: "URDNA2015" | `URGNA2012` | undefined;
+    //     skipExpansion?: boolean | undefined;
+    //     expansion?: boolean | undefined;
+    //     inputFormat?: MimeNQuad | undefined;
+    //     format?: MimeNQuad | undefined;
+    //     useNative?: boolean | undefined;
+    //   }
+    //   interface FromRdf {
+    //     format?: MimeNQuad | undefined;
+    //     rdfParser?: any;
+    //     useRdfType?: boolean | undefined;
+    //     useNativeTypes?: boolean | undefined;
+    //   }
+
+    // TODO: Use:
+    /**
+     *          [base] the base IRI to use.
+     *          [expandContext] a context to expand with.
+     *          [documentLoader(url, options)] the document loader.
+     *          [safe] true to use safe mode. (default: false)
+     */
+
+    interface ToRdf<Format extends MimeNQuad | undefined> extends Common {
+      /**
+       * True to assume the input is expanded and skip expansion,
+       * false not to.
+       * @default false.
+       */
+      skipExpansion?: boolean;
+      /**
+       * The format to use to output a string. 'application/n-quads' for
+       * N-Quads.
+       */
+      format?: Format;
+      /**
+       * true to output generalized RDF, false to produce only standard RDF.
+       * @default false
+       * @see https://www.w3.org/TR/rdf11-concepts/#section-generalized-rdf
+       */
+      produceGeneralizedRdf?: boolean;
+    }
+  }
   // export function compact(
   //   input: JsonLdDocument,
   //   ctx: ContextDefinition,
@@ -156,8 +216,12 @@ declare module "jsonld" {
   ): Promise<JsonLdArray>;
   export function toRDF(
     input: JsonLdDocument,
-    options?: Options.ToRdf
+    options?: Options.ToRdf<undefined>
   ): Promise<Quad[]>;
+  export function toRDF(
+    input: JsonLdDocument,
+    options?: Options.ToRdf<MimeNQuad>
+  ): Promise<string>;
   // export let JsonLdProcessor: JsonLdProcessor;
   // disable autoexport
   // export {};
