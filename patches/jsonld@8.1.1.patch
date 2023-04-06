@@ -1,0 +1,82 @@
+diff --git a/lib/toRdf.js b/lib/toRdf.js
+index d823a97ef7b5393ec16dca2c0b981daee1917e7c..2b7ef6d719a6d75bf593abad59cedd651859eaf7 100644
+--- a/lib/toRdf.js
++++ b/lib/toRdf.js
+@@ -63,11 +63,10 @@ api.toRDF = (input, options) => {
+       graphTerm = {termType: 'DefaultGraph', value: ''};
+     } else if(_isAbsoluteIri(graphName)) {
+       if(graphName.startsWith('_:')) {
+-        graphTerm = {termType: 'BlankNode'};
++        graphTerm = {termType: 'BlankNode', value: graphName.substring(2)};
+       } else {
+-        graphTerm = {termType: 'NamedNode'};
++        graphTerm = {termType: 'NamedNode', value: graphName};
+       }
+-      graphTerm.value = graphName;
+     } else {
+       // skip relative IRIs (not valid RDF)
+       if(options.eventHandler) {
+@@ -118,8 +117,11 @@ function _graphToRDF(dataset, graph, graphTerm, issuer, options) {
+ 
+       for(const item of items) {
+         // RDF subject
+-        const subject = {
+-          termType: id.startsWith('_:') ? 'BlankNode' : 'NamedNode',
++        const subject = id.startsWith('_:') ? {
++          termType: 'BlankNode',
++          value: id.substring(2)
++        } : {
++          termType: 'NamedNode',
+           value: id
+         };
+ 
+@@ -143,8 +145,11 @@ function _graphToRDF(dataset, graph, graphTerm, issuer, options) {
+         }
+ 
+         // RDF predicate
+-        const predicate = {
+-          termType: property.startsWith('_:') ? 'BlankNode' : 'NamedNode',
++        const predicate = property.startsWith('_:') ? {
++          termType: 'BlankNode',
++          value: property.substring(2)
++        } : {
++          termType: 'NamedNode',
+           value: property
+         };
+ 
+@@ -225,13 +230,15 @@ function _listToRDF(list, issuer, dataset, graphTerm, rdfDirection, options) {
+ 
+   const last = list.pop();
+   // Result is the head of the list
+-  const result = last ? {termType: 'BlankNode', value: issuer.getId()} : nil;
++  // TODO: Fix Blank Node
++  const result = last ? {termType: 'BlankNode', value: issuer.getId() + '--heyo'} : nil;
+   let subject = result;
+ 
+   for(const item of list) {
+     const object = _objectToRDF(
+       item, issuer, dataset, graphTerm, rdfDirection, options);
+-    const next = {termType: 'BlankNode', value: issuer.getId()};
++    // TODO: Fix Blank Node
++    const next = {termType: 'BlankNode', value: issuer.getId() + '--heyo-2'};
+     dataset.push({
+       subject,
+       predicate: first,
+@@ -335,8 +342,15 @@ function _objectToRDF(
+   } else {
+     // convert string/node object to RDF
+     const id = types.isObject(item) ? item['@id'] : item;
+-    object.termType = id.startsWith('_:') ? 'BlankNode' : 'NamedNode';
+-    object.value = id;
++
++    if(id.startsWith('_:')) {
++      object.termType = 'BlankNode';
++      object.value = id.substring(2);
++    } else {
++      object.termType = 'NamedNode';
++      object.value = id;
++    }
++
+   }
+ 
+   // skip relative IRIs, not valid RDF
