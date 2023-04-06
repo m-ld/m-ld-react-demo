@@ -1,7 +1,7 @@
 import { JsonLdDocument, frame, toRDF, fromRDF, NodeObject } from "jsonld";
 import { BaseQuad, Quad, Stream } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs";
-import { Algebra, Factory as SparqlFactory, toSparql } from "sparqlalgebrajs";
+import { Algebra, Factory as SparqlFactory } from "sparqlalgebrajs";
 import dataset from "@graphy/memory.dataset.fast";
 import { DataFactory } from "rdf-data-factory";
 
@@ -66,7 +66,7 @@ const query = async (input: JsonLdDocument, frameDocument: NodeObject) => {
     patterns
   );
 
-  const quadsStream = await engine.queryQuads(toSparql(algebraQuery), {
+  const quadsStream = await engine.queryQuads(algebraQuery, {
     sources: [inputDataset],
   });
 
