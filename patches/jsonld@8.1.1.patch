@@ -1,5 +1,42 @@
+diff --git a/lib/fromRdf.js b/lib/fromRdf.js
+index afddfdb9d488d85bfc858c94a8f3c21743277406..41fa4dfec9fe77669f1dea35e2e21ca37519f57b 100644
+--- a/lib/fromRdf.js
++++ b/lib/fromRdf.js
+@@ -75,7 +75,7 @@ api.fromRDF = async (
+     const nodeMap = graphMap[name];
+ 
+     // get subject, predicate, object
+-    const s = quad.subject.value;
++    const s = (quad.subject.termType === 'BlankNode' ? '_:' : '') + quad.subject.value;
+     const p = quad.predicate.value;
+     const o = quad.object;
+ 
+@@ -86,9 +86,10 @@ api.fromRDF = async (
+ 
+     const objectIsNode = o.termType.endsWith('Node');
+     if(objectIsNode && !(o.value in nodeMap)) {
+-      nodeMap[o.value] = {'@id': o.value};
++      nodeMap[o.value] = {'@id': (o.termType === 'BlankNode' ? '_:' : '') + o.value};
+     }
+ 
++    // TODO: Pretty sure there's more to fix.
+     if(p === RDF_TYPE && !useRdfType && objectIsNode) {
+       _addValue(node, '@type', o.value, {propertyIsArray: true});
+       continue;
+@@ -289,8 +290,10 @@ api.fromRDF = async (
+  */
+ function _RDFToObject(o, useNativeTypes, rdfDirection, options) {
+   // convert NamedNode/BlankNode object to JSON-LD
+-  if(o.termType.endsWith('Node')) {
++  if(o.termType === 'NamedNode') {
+     return {'@id': o.value};
++  } else if(o.termType === 'BlankNode') {
++    return {'@id': '_:' + o.value};
+   }
+ 
+   // convert literal to JSON-LD
 diff --git a/lib/toRdf.js b/lib/toRdf.js
-index d823a97ef7b5393ec16dca2c0b981daee1917e7c..2b7ef6d719a6d75bf593abad59cedd651859eaf7 100644
+index d823a97ef7b5393ec16dca2c0b981daee1917e7c..c1fd34b5332732d9290ace17cb34c3fb87178398 100644
 --- a/lib/toRdf.js
 +++ b/lib/toRdf.js
 @@ -63,11 +63,10 @@ api.toRDF = (input, options) => {
@@ -50,7 +87,7 @@ index d823a97ef7b5393ec16dca2c0b981daee1917e7c..2b7ef6d719a6d75bf593abad59cedd65
    // Result is the head of the list
 -  const result = last ? {termType: 'BlankNode', value: issuer.getId()} : nil;
 +  // TODO: Fix Blank Node
-+  const result = last ? {termType: 'BlankNode', value: issuer.getId() + '--heyo'} : nil;
++  const result = last ? {termType: 'BlankNode', value: issuer.getId().substring(2)} : nil;
    let subject = result;
  
    for(const item of list) {
@@ -58,7 +95,7 @@ index d823a97ef7b5393ec16dca2c0b981daee1917e7c..2b7ef6d719a6d75bf593abad59cedd65
        item, issuer, dataset, graphTerm, rdfDirection, options);
 -    const next = {termType: 'BlankNode', value: issuer.getId()};
 +    // TODO: Fix Blank Node
-+    const next = {termType: 'BlankNode', value: issuer.getId() + '--heyo-2'};
++    const next = {termType: 'BlankNode', value: issuer.getId().substring(2)};
      dataset.push({
        subject,
        predicate: first,

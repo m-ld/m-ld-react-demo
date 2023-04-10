@@ -1,9 +1,16 @@
 import { JsonLdDocument, frame, toRDF, fromRDF, NodeObject } from "jsonld";
-import { BaseQuad, Quad, Stream } from "@rdfjs/types";
+import {
+  BaseQuad,
+  Quad,
+  Stream,
+  Term,
+  BlankNode,
+  Variable,
+} from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs";
 import { Algebra, Factory as SparqlFactory } from "sparqlalgebrajs";
-import dataset from "@graphy/memory.dataset.fast";
 import { DataFactory } from "rdf-data-factory";
+import { dataset } from "./fixedDataset";
 
 // TODO: Is it bad to have these at the module level?
 const df = new DataFactory();
@@ -25,7 +32,7 @@ const readAll = <Q extends BaseQuad = Quad>(stream: Stream<Q>) => {
   });
 };
 
-const queryForFrame = async (frameDocument: NodeObject) => {
+export const sparqlForFrame = async (frameDocument: NodeObject) => {
   const sparql = new SparqlFactory();
 
   const frameRdf = (
@@ -34,13 +41,11 @@ const queryForFrame = async (frameDocument: NodeObject) => {
 
   const patterns = frameRdf.map((frameQuad) => {
     return sparql.createPattern(
-      frameQuad.subject,
-      frameQuad.predicate,
       // Swap blank nodes out for variables, so the engine resolves actual
       // values for them.
-      frameQuad.object.termType === "BlankNode"
-        ? df.variable(frameQuad.object.value)
-        : frameQuad.object
+      blankToVariable(frameQuad.subject),
+      blankToVariable(frameQuad.predicate),
+      blankToVariable(frameQuad.object)
     );
   });
 
@@ -71,7 +76,7 @@ const fixQuad = (q: Quad) => {
 };
 
 const query = async (input: JsonLdDocument, frameDocument: NodeObject) => {
-  const algebraQuery: Algebra.Construct = await queryForFrame(frameDocument);
+  const algebraQuery: Algebra.Construct = await sparqlForFrame(frameDocument);
 
   const inputRdf = (await toRDF(input)).map(fixQuad);
   const inputDataset = dataset().addAll(inputRdf);
@@ -87,3 +92,20 @@ export const frameQuery = async (
   input: JsonLdDocument,
   frameDocument: NodeObject
 ) => frame(await query(input, frameDocument), frameDocument);
+
+function blankToVariable(
+  term: Term
+): typeof term extends BlankNode ? Variable : typeof term {
+  // Naively reuse blank node names as variable names. This is safe if and only
+  // if we assume there are no existing variables—if there are any, the names
+  // could clash. As of this writing, we don't have any way to specify variables
+  // in the input query other than blank nodes, so this is fine.
+  //
+  // If we want to be more sophisticated, we can use sparqlalgebrajs's
+  // `Util.createUniqueVariable()`, which sparqlalgebrajs itself uses for a
+  // similar function, used optionally from within `translate()`.
+  //
+  // https://github.com/joachimvh/SPARQLAlgebra.js/blob/36ac499dc02b6a287188000a1bebf51b0cc5e33b/lib/sparqlAlgebra.ts#L60
+  // https://github.com/joachimvh/SPARQLAlgebra.js/blob/36ac499dc02b6a287188000a1bebf51b0cc5e33b/lib/sparqlAlgebra.ts#L931-L944
+  return term.termType === "BlankNode" ? df.variable(term.value) : term;
+}

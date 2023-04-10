@@ -1,153 +1,125 @@
-import { frameQuery } from "./frameQuery";
+import { beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { frameQuery, sparqlForFrame } from "./frameQuery";
+import { ContextDefinition, JsonLdDocument } from "jsonld";
+import "./toBeSparqlEqualTo";
 
-const context = {
-  dcterms: "http://purl.org/dc/terms/",
-  ex: "http://example.org/vocab#",
-  "ex:contains": { "@type": "@id" },
-};
-
-const input = {
-  "@context": context,
-  "@graph": [
-    {
-      "@id": "http://example.org/test/#library",
-      "@type": "ex:Library",
-      "ex:contains": "http://example.org/test#book",
-    },
-    {
-      "@id": "http://example.org/test#book",
-      "@type": "ex:Book",
-      "dcterms:contributor": "Writer",
-      "dcterms:title": "My Book",
-      "ex:contains": "http://example.org/test#chapter",
-    },
-    {
-      "@id": "http://example.org/test#chapter",
-      "@type": "ex:Chapter",
-      "dcterms:description": "Fun",
-      "dcterms:title": "Chapter One",
-    },
-  ],
-};
+// Workaround for jsonld.js: https://github.com/digitalbazaar/jsonld.js/issues/516#issuecomment-1485912565
+import { kyPromise } from "@digitalbazaar/http-client";
+beforeAll(async () => {
+  await kyPromise;
+});
 
 // These tests shouldn't take long. If they do, they're probably stuck somewhere
 // async, so fail fast.
 jest.setTimeout(100);
 
 describe("frame queries", () => {
-  // xit("should fetch and frame everything", async () => {
-  //   expect(
-  //     await frameQuery(input, {
-  //       "@context": context,
-  //       "@id": "http://example.org/test/#library",
-  //       "@type": {},
-  //       "ex:contains": {
-  //         "@id": {},
-  //         "@type": {},
-  //         "dcterms:contributor": {},
-  //         "dcterms:title": {},
-  //         "ex:contains": {
-  //           "@id": {},
-  //           "@type": {},
-  //           "dcterms:description": {},
-  //           "dcterms:title": {},
-  //         },
-  //       },
-  //     })
-  //   ).toStrictEqual({
-  //     "@context": context,
-  //     "@id": "http://example.org/test/#library",
-  //     "@type": "ex:Library",
-  //     "ex:contains": {
-  //       "@id": "http://example.org/test#book",
-  //       "@type": "ex:Book",
-  //       "dcterms:contributor": "Writer",
-  //       "dcterms:title": "My Book",
-  //       "ex:contains": {
-  //         "@id": "http://example.org/test#chapter",
-  //         "@type": "ex:Chapter",
-  //         "dcterms:description": "Fun",
-  //         "dcterms:title": "Chapter One",
-  //       },
-  //     },
-  //   });
-  // });
+  it("should fetch and frame literal property values by @id", async () => {
+    const context: ContextDefinition = {
+      "@vocab": "http://swapi.dev/documentation#",
+    };
 
-  it("should fetch and frame a single property by @id", async () => {
-    expect(
-      await frameQuery(input, {
-        "@context": context,
-        "@id": "http://example.org/test#book",
-        "dcterms:title": {},
-      })
-    ).toStrictEqual({
+    const input = {
       "@context": context,
-      "@id": "http://example.org/test#book",
-      "dcterms:title": "My Book",
-    });
+      "@id": "http://swapi.dev/api/people/1",
+      name: "Luke Skywalker",
+      height: "172",
+      mass: "77",
+    };
+
+    const query = {
+      "@context": context,
+      "@id": "http://swapi.dev/api/people/1",
+      name: {},
+      height: {},
+    };
+
+    expect(await sparqlForFrame(query)).toBeSparqlEqualTo(/* sparql */ `
+      PREFIX swapi: <http://swapi.dev/documentation#>
+      CONSTRUCT WHERE {
+        <http://swapi.dev/api/people/1> swapi:height ?b0;
+          swapi:name ?b1.
+      }
+    `);
+
+    expect(await frameQuery(input, query)).toStrictEqual({
+      "@context": context,
+      "@id": "http://swapi.dev/api/people/1",
+      name: "Luke Skywalker",
+      height: "172",
+    } satisfies JsonLdDocument);
   });
 
-  it("should fetch and frame multiple properties by @id", async () => {
-    expect(
-      await frameQuery(input, {
-        "@context": context,
-        "@id": "http://example.org/test#book",
-        "dcterms:title": {},
-        "dcterms:contributor": {},
-      })
-    ).toStrictEqual({
-      "@context": context,
-      "@id": "http://example.org/test#book",
-      "dcterms:title": "My Book",
-      "dcterms:contributor": "Writer",
-    });
-  });
+  it("should fetch and frame literal property values by properties", async () => {
+    const context: ContextDefinition = {
+      "@vocab": "http://swapi.dev/documentation#",
+    };
 
-  it("should fetch and frame by other properties", async () => {
-    expect(
-      await frameQuery(input, {
-        "@context": context,
-        "dcterms:title": "My Book",
-        "dcterms:contributor": {},
-      })
-    ).toStrictEqual({
+    const input: JsonLdDocument = {
       "@context": context,
-      "@id": "http://example.org/test#book",
-      "dcterms:title": "My Book",
-      "dcterms:contributor": "Writer",
-    });
-  });
-
-  it("should fetch and frame child objects", async () => {
-    expect(
-      await frameQuery(input, {
-        "@context": context,
-        "@id": "http://example.org/test/#library",
-        "ex:contains": {},
-      })
-    ).toStrictEqual({
-      "@context": context,
-      "@id": "http://example.org/test/#library",
-      "ex:contains": "http://example.org/test#book",
-    });
-  });
-
-  it("should fetch and frame within nested objects", async () => {
-    expect(
-      await frameQuery(input, {
-        "@context": context,
-        "@id": "http://example.org/test/#library",
-        "ex:contains": {
-          "dcterms:title": {},
+      "@graph": [
+        {
+          "@id": "http://swapi.dev/api/people/1",
+          name: "Luke Skywalker",
+          height: "172",
+          mass: "77",
+          hair_color: "blond",
+          skin_color: "fair",
+          eye_color: "blue",
         },
-      })
-    ).toStrictEqual({
+        {
+          "@id": "http://swapi.dev/api/people/5",
+          name: "Leia Organa",
+          height: "150",
+          mass: "49",
+          hair_color: "brown",
+          skin_color: "light",
+          eye_color: "brown",
+        },
+        {
+          "@id": "http://swapi.dev/api/people/6",
+          name: "Owen Lars",
+          height: "178",
+          mass: "120",
+          hair_color: "brown, grey",
+          skin_color: "light",
+          eye_color: "blue",
+        },
+      ],
+    };
+
+    const query = {
       "@context": context,
-      "@id": "http://example.org/test/#library",
-      "ex:contains": {
-        "@id": "http://example.org/test#book",
-        "dcterms:title": "My Book",
-      },
-    });
+      name: {},
+      height: {},
+      eye_color: "blue",
+    };
+
+    expect(await sparqlForFrame(query)).toBeSparqlEqualTo(/* sparql */ `
+      PREFIX swapi: <http://swapi.dev/documentation#>
+      CONSTRUCT WHERE {
+        ?b0 swapi:eye_color "blue";
+          swapi:height ?b1;
+          swapi:name ?b2.
+      }
+    `);
+
+    expect(await frameQuery(input, query)).toStrictEqual({
+      "@context": context,
+      "@graph": [
+        {
+          "@id": "http://swapi.dev/api/people/1",
+          name: "Luke Skywalker",
+          height: "172",
+          eye_color: "blue",
+        },
+        {
+          "@id": "http://swapi.dev/api/people/6",
+          name: "Owen Lars",
+          height: "178",
+          eye_color: "blue",
+        },
+      ],
+    } satisfies JsonLdDocument);
   });
 });

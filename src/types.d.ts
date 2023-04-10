@@ -1,3 +1,9 @@
+// Not a complete typing at all, just enough to implement this workaround for
+// jsonld.js: https://github.com/digitalbazaar/jsonld.js/issues/516#issuecomment-1485912565
+declare module "@digitalbazaar/http-client" {
+  export const kyPromise: Promise;
+}
+
 declare module "@graphy/memory.dataset.fast" {
   import { Dataset } from "@rdfjs/types";
   import { Duplex } from "node:stream";
@@ -5,7 +11,9 @@ declare module "@graphy/memory.dataset.fast" {
   class FastDataset<
     OutQuad extends BaseQuad = Quad,
     InQuad extends BaseQuad = OutQuad
-  > extends Duplex {}
+  > extends Duplex {
+    protected offspring(h_quad_tree: unknown = null): this;
+  }
 
   // The methods on Dataset which return new datasets (rather than mutating the
   // current one) are only specified to return objects which conform to Dataset.
@@ -31,10 +39,12 @@ declare module "@graphy/memory.dataset.fast" {
     ): this;
   }
 
-  export default function dataset<
+  const dataset: (<
     OutQuad extends BaseQuad = Quad,
     InQuad extends BaseQuad = OutQuad
-  >(): FastDataset<OutQuad, InQuad>;
+  >() => FastDataset<OutQuad, InQuad>) & { keys: symbol; quads: symbol };
+
+  export = dataset;
 }
 
 // Because the DefinitelyTyped definitions are way out of date:
@@ -554,4 +564,17 @@ declare module "jsonld/jsonld-spec" {
   }
 
   export {};
+}
+
+// Recreate the types of the original MatcherFunctions from the declared
+// Matchers.
+declare module "expect/build/matchers" {
+  import { Matchers, MatcherFunction } from "expect";
+  type MatcherFunctions = {
+    [Name in keyof Matchers<unknown>]: MatcherFunction<
+      Parameters<Matchers[Name]>
+    >;
+  };
+  const matchers: MatcherFunctions;
+  export default matchers;
 }

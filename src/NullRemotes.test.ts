@@ -1,3 +1,4 @@
+import { describe, expect, it } from "@jest/globals";
 import { NullRemotes } from "./NullRemotes";
 import { eachValueFrom } from "rxjs-for-await";
 
@@ -6,7 +7,7 @@ import { MemoryLevel } from "memory-level";
 import { Observable } from "rxjs";
 
 describe("New null remotes", () => {
-  test("can be cloned", async () => {
+  it("can be cloned", async () => {
     const meld = await clone(new MemoryLevel(), NullRemotes, {
       "@id": uuid(),
       "@domain": "test.example.org",
@@ -27,7 +28,7 @@ describe("New null remotes", () => {
     });
   });
 
-  test("can deliver updates", async () => {
+  it("can deliver updates", async () => {
     const meld = await clone(new MemoryLevel(), NullRemotes, {
       "@id": uuid(),
       "@domain": "test.example.org",
