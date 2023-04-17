@@ -45,11 +45,10 @@ const input: JsonLdDocument = {
       skin_color: "fair",
       eye_color: "blue",
       films: [
-        "https://swapi.dev/api/films/2/",
-        "https://swapi.dev/api/films/6/",
-        "https://swapi.dev/api/films/3/",
         "https://swapi.dev/api/films/1/",
-        "https://swapi.dev/api/films/7/",
+        "https://swapi.dev/api/films/2/",
+        "https://swapi.dev/api/films/3/",
+        "https://swapi.dev/api/films/6/",
       ],
       vehicles: [
         "https://swapi.dev/api/vehicles/14/",
@@ -100,36 +99,42 @@ const input: JsonLdDocument = {
       title: "A New Hope",
       episode_id: 4,
       release_date: "1977-05-25",
+      director: "George Lucas",
     },
     {
       url: "https://swapi.dev/api/films/2/",
       title: "The Empire Strikes Back",
       episode_id: 5,
       release_date: "1980-05-17",
+      director: "Irvin Kershner",
     },
     {
       url: "https://swapi.dev/api/films/3/",
       title: "Return of the Jedi",
       episode_id: 6,
       release_date: "1983-05-25",
+      director: "Richard Marquand",
     },
     {
       url: "https://swapi.dev/api/films/4/",
       title: "The Phantom Menace",
       episode_id: 1,
       release_date: "1999-05-19",
+      director: "George Lucas",
     },
     {
       url: "https://swapi.dev/api/films/5/",
       title: "Attack of the Clones",
       episode_id: 2,
       release_date: "2002-05-16",
+      director: "George Lucas",
     },
     {
       url: "https://swapi.dev/api/films/6/",
       title: "Revenge of the Sith",
       episode_id: 3,
       release_date: "2005-05-19",
+      director: "George Lucas",
     },
   ],
 };
@@ -413,10 +418,19 @@ WHERE {
       height: {},
       // ...and for each of their films...
       films: {
+        // ...directed by George Lucas...
+        director: "George Lucas",
         // ...tell me its title...
         title: {},
-        // ...and its release date.
+        // ...and its release date...
         release_date: {},
+      },
+      // ...and for each of their vehicles...
+      vehicles: {
+        // ...tell me its name...
+        name: {},
+        // ...and its model name.
+        model: {},
       },
     };
 
@@ -432,9 +446,7 @@ WHERE {
         # ?rest
       WHERE {
         # Pick our targets.
-        # FILTER(?luke = <https://swapi.dev/api/people/1/>)
         ?luke swapi:hair_color "blond"
-        # FILTER(?luke = ?luke1)
 
         # Luke's name, height, and film ids
         {
@@ -451,6 +463,7 @@ WHERE {
           UNION
           {
             ?s swapi:films ?o .
+            ?o swapi:director "George Lucas" .
             BIND(swapi:films AS ?p)
           }
 
@@ -461,6 +474,7 @@ WHERE {
         {
           # Pick our targets.
           ?luke swapi:films ?s .
+          ?s swapi:director "George Lucas" .
 
           # Get the values.
           {
@@ -528,34 +542,14 @@ WHERE {
         `"Snowspeeder"`,
       ],
       [
-        "https://swapi.dev/api/people/1/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/2/`,
-      ],
-      [
         "https://swapi.dev/api/vehicles/30/",
         "https://swapi.dev/documentation#name",
         `"Imperial Speeder Bike"`,
       ],
       [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/2/`,
-      ],
-      [
         "https://swapi.dev/api/vehicles/38/",
         "https://swapi.dev/documentation#name",
         `"Tribubble bongo"`,
-      ],
-      [
-        "https://swapi.dev/api/people/1/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/3/`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/3/`,
       ],
       [
         "https://swapi.dev/api/people/10/",
@@ -586,31 +580,6 @@ WHERE {
         "https://swapi.dev/api/films/1/",
         "https://swapi.dev/documentation#release_date",
         `"1977-05-25"`,
-      ],
-      [
-        "https://swapi.dev/api/people/1/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/7/`,
-      ],
-      [
-        "https://swapi.dev/api/films/2/",
-        "https://swapi.dev/documentation#title",
-        `"The Empire Strikes Back"`,
-      ],
-      [
-        "https://swapi.dev/api/films/2/",
-        "https://swapi.dev/documentation#release_date",
-        `"1980-05-17"`,
-      ],
-      [
-        "https://swapi.dev/api/films/3/",
-        "https://swapi.dev/documentation#title",
-        `"Return of the Jedi"`,
-      ],
-      [
-        "https://swapi.dev/api/films/3/",
-        "https://swapi.dev/documentation#release_date",
-        `"1983-05-25"`,
       ],
       [
         "https://swapi.dev/api/films/6/",
