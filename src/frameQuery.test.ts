@@ -1,15 +1,138 @@
 import { beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { frameQuery, sparqlForFrame } from "./frameQuery";
-import { ContextDefinition, JsonLdDocument } from "jsonld";
+import { ContextDefinition, JsonLdDocument, toRDF } from "jsonld";
 import "./toBeSparqlEqualTo";
-
-// Workaround for jsonld.js: https://github.com/digitalbazaar/jsonld.js/issues/516#issuecomment-1485912565
+import "./toBeBindingsEqualTo";
 import { kyPromise } from "@digitalbazaar/http-client";
 import { debug } from "./debug";
-import { Parser } from "n3";
+import { Store, Writer } from "n3";
+import { Quad } from "@rdfjs/types";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs";
+import { ConsoleLogger } from "./logger";
+import { readAll } from "./readAll";
+
+// Workaround for jsonld.js: https://github.com/digitalbazaar/jsonld.js/issues/516#issuecomment-1485912565
 beforeAll(async () => {
   await kyPromise;
 });
+
+const engine = new QueryEngine();
+
+const input: JsonLdDocument = {
+  "@context": {
+    "@vocab": "https://swapi.dev/documentation#",
+    url: "@id",
+    films: { "@type": "@id" },
+    /**
+     * NOTE: The vehicles property is arbitrarily declared as a @list for this
+     * test. It doesn't really make sense for the data, but we need to
+     * demonstrate @list behavior, and there's nothing better to choose instead.
+     */
+    vehicles: { "@container": "@list", "@type": "@id" },
+    /**
+     * NOTE: This property is not in actual SWAPI at all, but we need a property
+     * that points from one Person to another.
+     */
+    master: { "@type": "@id" },
+  },
+  "@graph": [
+    {
+      url: "https://swapi.dev/api/people/1/",
+      name: "Luke Skywalker",
+      height: "172",
+      mass: "77",
+      hair_color: "blond",
+      skin_color: "fair",
+      eye_color: "blue",
+      films: [
+        "https://swapi.dev/api/films/2/",
+        "https://swapi.dev/api/films/6/",
+        "https://swapi.dev/api/films/3/",
+        "https://swapi.dev/api/films/1/",
+        "https://swapi.dev/api/films/7/",
+      ],
+      vehicles: [
+        "https://swapi.dev/api/vehicles/14/",
+        "https://swapi.dev/api/vehicles/30/",
+        "https://swapi.dev/api/vehicles/40/",
+      ],
+      master: "https://swapi.dev/api/people/10/",
+    },
+    {
+      url: "https://swapi.dev/api/people/10/",
+      name: "Obi-Wan Kenobi",
+      height: "182",
+      mass: "77",
+      hair_color: "auburn, white",
+      skin_color: "fair",
+      eye_color: "blue-gray",
+      birth_year: "57BBY",
+      films: [
+        "https://swapi.dev/api/films/1/",
+        "https://swapi.dev/api/films/2/",
+        "https://swapi.dev/api/films/3/",
+        "https://swapi.dev/api/films/4/",
+        "https://swapi.dev/api/films/5/",
+        "https://swapi.dev/api/films/6/",
+      ],
+      vehicles: ["https://swapi.dev/api/vehicles/38/"],
+    },
+    {
+      url: "https://swapi.dev/api/vehicles/14/",
+      name: "Snowspeeder",
+      model: "t-47 airspeeder",
+      manufacturer: "Incom corporation",
+    },
+    {
+      url: "https://swapi.dev/api/vehicles/30/",
+      name: "Imperial Speeder Bike",
+      model: "74-Z speeder bike",
+      manufacturer: "Aratech Repulsor Company",
+    },
+    {
+      url: "https://swapi.dev/api/vehicles/38/",
+      name: "Tribubble bongo",
+      model: "Tribubble bongo",
+      manufacturer: "Otoh Gunga Bongameken Cooperative",
+    },
+    {
+      url: "https://swapi.dev/api/films/1/",
+      title: "A New Hope",
+      episode_id: 4,
+      release_date: "1977-05-25",
+    },
+    {
+      url: "https://swapi.dev/api/films/2/",
+      title: "The Empire Strikes Back",
+      episode_id: 5,
+      release_date: "1980-05-17",
+    },
+    {
+      url: "https://swapi.dev/api/films/3/",
+      title: "Return of the Jedi",
+      episode_id: 6,
+      release_date: "1983-05-25",
+    },
+    {
+      url: "https://swapi.dev/api/films/4/",
+      title: "The Phantom Menace",
+      episode_id: 1,
+      release_date: "1999-05-19",
+    },
+    {
+      url: "https://swapi.dev/api/films/5/",
+      title: "Attack of the Clones",
+      episode_id: 2,
+      release_date: "2002-05-16",
+    },
+    {
+      url: "https://swapi.dev/api/films/6/",
+      title: "Revenge of the Sith",
+      episode_id: 3,
+      release_date: "2005-05-19",
+    },
+  ],
+};
 
 // These tests shouldn't take long. If they do, they're probably stuck somewhere
 // async, so fail fast.
@@ -18,12 +141,12 @@ jest.setTimeout(100);
 describe("frame queries", () => {
   it("should fetch and frame literal property values by @id", async () => {
     const context: ContextDefinition = {
-      "@vocab": "http://swapi.dev/documentation#",
+      "@vocab": "https://swapi.dev/documentation#",
     };
 
     const input = {
       "@context": context,
-      "@id": "http://swapi.dev/api/people/1/",
+      "@id": "https://swapi.dev/api/people/1/",
       name: "Luke Skywalker",
       height: "172",
       mass: "77",
@@ -31,22 +154,22 @@ describe("frame queries", () => {
 
     const query = {
       "@context": context,
-      "@id": "http://swapi.dev/api/people/1/",
+      "@id": "https://swapi.dev/api/people/1/",
       name: {},
       height: {},
     };
 
     expect(await sparqlForFrame(query)).toBeSparqlEqualTo(/* sparql */ `
-      PREFIX swapi: <http://swapi.dev/documentation#>
+      PREFIX swapi: <https://swapi.dev/documentation#>
       CONSTRUCT WHERE {
-        <http://swapi.dev/api/people/1/> swapi:height ?b0;
+        <https://swapi.dev/api/people/1/> swapi:height ?b0;
           swapi:name ?b1.
       }
     `);
 
     expect(await frameQuery(input, query)).toStrictEqual({
       "@context": context,
-      "@id": "http://swapi.dev/api/people/1/",
+      "@id": "https://swapi.dev/api/people/1/",
       name: "Luke Skywalker",
       height: "172",
     } satisfies JsonLdDocument);
@@ -54,14 +177,14 @@ describe("frame queries", () => {
 
   it("should fetch and frame literal property values by properties", async () => {
     const context: ContextDefinition = {
-      "@vocab": "http://swapi.dev/documentation#",
+      "@vocab": "https://swapi.dev/documentation#",
     };
 
     const input: JsonLdDocument = {
       "@context": context,
       "@graph": [
         {
-          "@id": "http://swapi.dev/api/people/1/",
+          "@id": "https://swapi.dev/api/people/1/",
           name: "Luke Skywalker",
           height: "172",
           mass: "77",
@@ -70,7 +193,7 @@ describe("frame queries", () => {
           eye_color: "blue",
         },
         {
-          "@id": "http://swapi.dev/api/people/5/",
+          "@id": "https://swapi.dev/api/people/5/",
           name: "Leia Organa",
           height: "150",
           mass: "49",
@@ -79,7 +202,7 @@ describe("frame queries", () => {
           eye_color: "brown",
         },
         {
-          "@id": "http://swapi.dev/api/people/6/",
+          "@id": "https://swapi.dev/api/people/6/",
           name: "Owen Lars",
           height: "178",
           mass: "120",
@@ -98,7 +221,7 @@ describe("frame queries", () => {
     };
 
     expect(await sparqlForFrame(query)).toBeSparqlEqualTo(/* sparql */ `
-      PREFIX swapi: <http://swapi.dev/documentation#>
+      PREFIX swapi: <https://swapi.dev/documentation#>
       CONSTRUCT WHERE {
         ?b0 swapi:eye_color "blue";
           swapi:height ?b1;
@@ -110,13 +233,13 @@ describe("frame queries", () => {
       "@context": context,
       "@graph": [
         {
-          "@id": "http://swapi.dev/api/people/1/",
+          "@id": "https://swapi.dev/api/people/1/",
           name: "Luke Skywalker",
           height: "172",
           eye_color: "blue",
         },
         {
-          "@id": "http://swapi.dev/api/people/6/",
+          "@id": "https://swapi.dev/api/people/6/",
           name: "Owen Lars",
           height: "178",
           eye_color: "blue",
@@ -125,15 +248,15 @@ describe("frame queries", () => {
     } satisfies JsonLdDocument);
   });
 
-  it("should TODO: lists", async () => {
+  xit("should TODO: lists", async () => {
     const input: JsonLdDocument = {
       "@context": {
-        "@vocab": "http://swapi.dev/documentation#",
+        "@vocab": "https://swapi.dev/documentation#",
         vehicles: { "@container": "@list", "@type": "@id" },
       },
       "@graph": [
         {
-          "@id": "http://swapi.dev/api/people/1/",
+          "@id": "https://swapi.dev/api/people/1/",
           name: "Luke Skywalker",
           height: "172",
           mass: "77",
@@ -163,194 +286,343 @@ describe("frame queries", () => {
 
     const query = {
       "@context": input["@context"],
-      "@id": "http://swapi.dev/api/people/1/",
+      "@id": "https://swapi.dev/api/people/1/",
       name: {},
       vehicles: {},
     };
 
     expect(await sparqlForFrame(query)).toBeSparqlEqualTo(/* sparql */ `
-      PREFIX swapi: <http://swapi.dev/documentation#>
+      PREFIX swapi: <https://swapi.dev/documentation#>
       CONSTRUCT WHERE {
-        <http://swapi.dev/api/people/1/> swapi:name ?b0.
+        <https://swapi.dev/api/people/1/> swapi:name ?b0.
         ?b2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> ?b1;
           <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil>.
-        <http://swapi.dev/api/people/1/> swapi:vehicles ?b2.
+        <https://swapi.dev/api/people/1/> swapi:vehicles ?b2.
       }
     `);
 
     expect(await frameQuery(input, query)).toStrictEqual({
       "@context": {
-        "@vocab": "http://swapi.dev/documentation#",
+        "@vocab": "https://swapi.dev/documentation#",
         vehicles: { "@container": "@list", "@type": "@id" },
       },
       "@graph": [
         {
-          "@id": "http://swapi.dev/api/people/1/",
+          "@id": "https://swapi.dev/api/people/1/",
           name: "Luke Skywalker",
         },
       ],
     } satisfies JsonLdDocument);
   });
 
-  it.only("FIGURE OUT QUERY", async () => {
-    const input: JsonLdDocument = {
+  xit("DEBUG LUKE FLUKE", async () => {
+    const engine = new QueryEngine();
+
+    const minimalInput = {
       "@context": {
-        "@vocab": "http://swapi.dev/documentation#",
-        vehicles: { "@container": "@list", "@type": "@id" },
+        "@vocab": "https://swapi.dev/documentation#",
       },
       "@graph": [
         {
-          "@id": "http://swapi.dev/api/people/1/",
+          "@id": "https://swapi.dev/api/people/1/",
           name: "Luke Skywalker",
           height: "172",
-          mass: "77",
           hair_color: "blond",
-          skin_color: "fair",
-          eye_color: "blue",
-          vehicles: [
-            "https://swapi.dev/api/vehicles/14/",
-            "https://swapi.dev/api/vehicles/30/",
-            "https://swapi.dev/api/vehicles/40/",
-          ],
         },
         {
-          "@id": "https://swapi.dev/api/vehicles/14/",
-          name: "Snowspeeder",
-          model: "t-47 airspeeder",
-          manufacturer: "Incom corporation",
+          "@id": "https://swapi.dev/api/people/10/",
+          name: "Obi-Wan Kenobi",
+          height: "182",
+          hair_color: "auburn, white",
         },
         {
-          "@id": "https://swapi.dev/api/vehicles/30/",
-          name: "Imperial Speeder Bike",
-          model: "74-Z speeder bike",
-          manufacturer: "Aratech Repulsor Company",
+          "@id": "https://swapi.dev/api/people/32/",
+          name: "Qui-Gon Jinn",
+          hair_color: "brown",
         },
       ],
     };
 
+    const query = /* sparql */ `
+PREFIX swapi: <https://swapi.dev/documentation#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT ?s ?p ?o
+WHERE {
+  ?luke swapi:hair_color "blond" .
+
+  {
+    {
+      ?s swapi:name ?o .
+      BIND(swapi:name AS ?p)
+    }
+    UNION
+    {
+      ?s swapi:height ?o .
+      BIND(swapi:height AS ?p)
+    }
+
+    BIND(?s AS ?luke)
+  }
+}
+`;
+
+    function source(data: Quad[]) {
+      const store = new Store();
+      store.addQuads(data);
+      return store;
+    }
+
+    console.log(new Writer().quadsToString(await toRDF(minimalInput)));
+
+    const bindingsStream = await engine.queryBindings(query, {
+      sources: [source(await toRDF(minimalInput))],
+      log: new ConsoleLogger({ level: "debug" }),
+    });
+
+    const bindings = await readAll(bindingsStream);
+
+    expect(bindings).toBeBindingsEqualTo([
+      ["s", "p", "o"],
+      [
+        `https://swapi.dev/api/people/1/`,
+        `https://swapi.dev/documentation#name`,
+        `"Luke Skywalkerr"`,
+      ],
+      // [
+      //   `https://swapi.dev/api/people/10/`,
+      //   `https://swapi.dev/documentation#name`,
+      //   `"Obi-Wan Kenobi"`,
+      // ],
+      // [
+      //   `https://swapi.dev/api/people/32/`,
+      //   `https://swapi.dev/documentation#name`,
+      //   `"Qui-Gon Jinn"`,
+      // ],
+    ]);
+  });
+
+  it("FIGURE OUT QUERY", async () => {
     const query = {
       "@context": input["@context"],
-      "@id": "http://swapi.dev/api/people/1/",
+      // For each person with blue eyes...
+      eye_color: "blue",
+      // ...tell me their name...
       name: {},
-      vehicles: {},
+      // ...and their height...
+      height: {},
+      // ...and for each of their films...
+      films: {
+        // ...tell me its title...
+        title: {},
+        // ...and its release date.
+        release_date: {},
+      },
     };
 
-    const inputTurtle = /* turtle */ `
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#eye_color> "blue" .
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#hair_color> "blond" .
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#height> "172" .
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#mass> "77" .
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#name> "Luke Skywalker" .
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#skin_color> "fair" .
-      _:n0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://swapi.dev/api/vehicles/14/> .
-      _:n0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:n1 .
-      _:n1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://swapi.dev/api/vehicles/30/> .
-      _:n1 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> _:n2 .
-      _:n2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://swapi.dev/api/vehicles/40/> .
-      _:n2 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
-      <http://swapi.dev/api/people/1/> <http://swapi.dev/documentation#vehicles> _:n0 .
-      <https://swapi.dev/api/vehicles/14/> <http://swapi.dev/documentation#manufacturer> "Incom corporation" .
-      <https://swapi.dev/api/vehicles/14/> <http://swapi.dev/documentation#model> "t-47 airspeeder" .
-      <https://swapi.dev/api/vehicles/14/> <http://swapi.dev/documentation#name> "Snowspeeder" .
-      <https://swapi.dev/api/vehicles/30/> <http://swapi.dev/documentation#manufacturer> "Aratech Repulsor Company" .
-      <https://swapi.dev/api/vehicles/30/> <http://swapi.dev/documentation#model> "74-Z speeder bike" .
-      <https://swapi.dev/api/vehicles/30/> <http://swapi.dev/documentation#name> "Imperial Speeder Bike" .
-      <http://swapi.dev/api/people/2/> <http://swapi.dev/documentation#vehicles> _:xn0 .
-      _:xn0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <ex:somethingElse> .
-      _:xn0 <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
+    const inputQuads = await toRDF(input);
+
+    const sparqlQuery = /* sparql */ `
+      PREFIX swapi: <https://swapi.dev/documentation#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      SELECT 
+        # *
+        ?s ?p ?o
+        # ?rest
+      WHERE {
+        # Pick our targets.
+        # FILTER(?luke = <https://swapi.dev/api/people/1/>)
+        ?luke swapi:hair_color "blond"
+        # FILTER(?luke = ?luke1)
+
+        # Luke's name, height, and film ids
+        {
+          # Get the values.
+          {
+            ?s swapi:name ?o .
+            BIND(swapi:name AS ?p)
+          }
+          UNION
+          {
+            ?s swapi:height ?o .
+            BIND(swapi:height AS ?p)
+          }
+          UNION
+          {
+            ?s swapi:films ?o .
+            BIND(swapi:films AS ?p)
+          }
+
+          BIND(?s AS ?luke)
+        }
+        UNION
+        # Luke's films' titles and release dates
+        {
+          # Pick our targets.
+          ?luke swapi:films ?s .
+
+          # Get the values.
+          {
+            ?s swapi:title ?o .
+            BIND(swapi:title AS ?p)
+          }
+          UNION
+          {
+            ?s swapi:release_date ?o .
+            BIND(swapi:release_date AS ?p)
+          }
+        }
+      }
     `;
 
-    console.log(
-      await debug(
-        inputTurtle,
-        /* sparql */ `
-          PREFIX swapi: <http://swapi.dev/documentation#>
-          PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    function source(data: Quad[]) {
+      const store = new Store();
+      store.addQuads(data);
+      return store;
+    }
 
+    const bindingsStream = await engine.queryBindings(sparqlQuery, {
+      sources: [source(await toRDF(input))],
+      log: new ConsoleLogger({ level: "debug" }),
+    });
 
-          SELECT ?s ?p ?node ?element ?rest ?o #?apple·sauce
-          WHERE {
-            # BOOKMARK: Can we somehow only bind ?s to the node we're looking at for its queries and then also bind it to deeper things later?
-            VALUES ?p { swapi:vehicles swapi:name }
+    const bindings = await readAll(bindingsStream);
 
-            # Parent filters
-            # BIND(<http://swapi.dev/api/people/2/> AS ?s)
-            ?s swapi:eye_color "blue" .
+    expect(bindings).toBeBindingsEqualTo([
+      ["s", "p", "o"],
+      [
+        `https://swapi.dev/api/people/1/`,
+        `https://swapi.dev/documentation#name`,
+        `"Luke Skywalker"`,
+      ],
+      [
+        `https://swapi.dev/api/people/1/`,
+        `https://swapi.dev/documentation#height`,
+        `"172"`,
+      ],
 
-            # {
-              # Get value
-              ?s ?p ?o .
-            # }
-
-            # If ?o is a list, get a binding for each node in the list.
-            OPTIONAL {
-              ?o rdf:rest* ?node .
-              ?node rdf:first ?element .
-              ?node rdf:rest ?rest .
-
-              # OPTIONAL {
-              #   ?first swapi:name ?apple·sauce
-              # }
-            }
-          }
-        
-
-          # SELECT ?type ?s ?p ?o ?node ?first ?rest
-          # WHERE {
-          #   {
-          #     SELECT ?type ?s ?p ?o
-          #     WHERE {
-          #       BIND("property" AS ?type)
-          #       # BIND(<http://swapi.dev/api/people/1/> AS ?s)
-          #       BIND(swapi:eye_color AS ?p)
-          #       BIND("blue" AS ?o)
-          #       ?s ?p ?o .
-          #     }
-          #   }
-          #   UNION
-          #   {
-          #     SELECT ?type ?s ?p ?node ?first ?rest
-          #     WHERE {
-          #       BIND("list" AS ?type)
-          #       # BIND(<http://swapi.dev/api/people/1/> AS ?s)
-          #       BIND(swapi:vehicles AS ?p)
-          #       ?s ?p ?list .
-          #       ?list rdf:rest* ?node .
-          #       ?node rdf:first ?first .
-          #       ?node rdf:rest ?rest .
-          #     }
-          #   }
-          # }
-        `
-        //     /* sparql */ `
-        //   PREFIX swapi: <http://swapi.dev/documentation#>
-        //   PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-        //   # Nope, CONSTRUCT is still no good.
-        //   CONSTRUCT {
-        //     # ?s ?p ?list.
-        //     ?node rdf:first ?first.
-        //     ?node rdf:rest ?rest.
-        //   }
-        //   WHERE {
-        //     {
-        //       SELECT ?type ?s ?p ?list ?node ?first ?rest
-        //       WHERE {
-        //         BIND("list" AS ?type)
-        //         # BIND(<http://swapi.dev/api/people/1/> AS ?s)
-        //         BIND(swapi:vehicles AS ?p)
-        //         ?s ?p ?list .
-        //         ?list rdf:rest* ?node .
-        //         ?node rdf:first ?first .
-        //         ?node rdf:rest ?rest .
-        //       }
-        //     }
-        //   }
-        // `
-      )
-    );
-
-    expect(1).toBe(2);
+      [
+        "https://swapi.dev/api/people/1/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/1/`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#name",
+        `"Obi-Wan Kenobi"`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#height",
+        `"182"`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/1/`,
+      ],
+      [
+        "https://swapi.dev/api/vehicles/14/",
+        "https://swapi.dev/documentation#name",
+        `"Snowspeeder"`,
+      ],
+      [
+        "https://swapi.dev/api/people/1/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/2/`,
+      ],
+      [
+        "https://swapi.dev/api/vehicles/30/",
+        "https://swapi.dev/documentation#name",
+        `"Imperial Speeder Bike"`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/2/`,
+      ],
+      [
+        "https://swapi.dev/api/vehicles/38/",
+        "https://swapi.dev/documentation#name",
+        `"Tribubble bongo"`,
+      ],
+      [
+        "https://swapi.dev/api/people/1/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/3/`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/3/`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/4/`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/5/`,
+      ],
+      [
+        "https://swapi.dev/api/people/1/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/6/`,
+      ],
+      [
+        "https://swapi.dev/api/films/1/",
+        "https://swapi.dev/documentation#title",
+        `"A New Hope"`,
+      ],
+      [
+        "https://swapi.dev/api/people/10/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/6/`,
+      ],
+      [
+        "https://swapi.dev/api/films/1/",
+        "https://swapi.dev/documentation#release_date",
+        `"1977-05-25"`,
+      ],
+      [
+        "https://swapi.dev/api/people/1/",
+        "https://swapi.dev/documentation#films",
+        `https://swapi.dev/api/films/7/`,
+      ],
+      [
+        "https://swapi.dev/api/films/2/",
+        "https://swapi.dev/documentation#title",
+        `"The Empire Strikes Back"`,
+      ],
+      [
+        "https://swapi.dev/api/films/2/",
+        "https://swapi.dev/documentation#release_date",
+        `"1980-05-17"`,
+      ],
+      [
+        "https://swapi.dev/api/films/3/",
+        "https://swapi.dev/documentation#title",
+        `"Return of the Jedi"`,
+      ],
+      [
+        "https://swapi.dev/api/films/3/",
+        "https://swapi.dev/documentation#release_date",
+        `"1983-05-25"`,
+      ],
+      [
+        "https://swapi.dev/api/films/6/",
+        "https://swapi.dev/documentation#title",
+        `"Revenge of the Sith"`,
+      ],
+      [
+        "https://swapi.dev/api/films/6/",
+        "https://swapi.dev/documentation#release_date",
+        `"2005-05-19"`,
+      ],
+    ]);
   }, 5000);
 
   //   it("should fetch and frame child objects", async () => {

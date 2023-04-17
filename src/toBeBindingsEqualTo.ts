@@ -8,6 +8,9 @@ import { stringToTerm, termToString } from "rdf-string";
 import { identity, mapValues, sortBy, zip } from "lodash";
 import { ColumnUserConfig, table } from "table";
 
+// Note: You'll see the unfortunate word "bindingses" in this module. That
+// refers to an instance of `Bindings[]`.
+
 /**
  * Make all properties in T *not* readonly
  */
@@ -38,6 +41,19 @@ const isIterableOf = <E>(
   return true;
 };
 
+/** Returns true if the two sets of bindings contain the same information. */
+const bindingsesMatch = (actual: Bindings[], expected: Bindings[]) => {
+  const sortedBindingses = (bindings: Bindings[]): Bindings[] =>
+    sortBy(bindings, (b) =>
+      sortBy([...b.keys()], (v) => v.value).map((v) => termToString(b.get(v)))
+    );
+
+  const sortedActual = sortedBindingses(actual);
+  const sortedExpected = sortedBindingses(expected);
+
+  return !zip(sortedActual, sortedExpected).find(([a, e]) => !a?.equals(e));
+};
+
 export const toBeBindingsEqualTo: MatcherFunction<
   [expectedBindings: ExpectedBindings]
 > = function (actual, expected) {
@@ -49,9 +65,17 @@ export const toBeBindingsEqualTo: MatcherFunction<
 
   const df = new DataFactory();
   const bf = new BindingsFactory(df);
+
+  const actualBindingses = [...actual];
+
+  // We assume here that every Bindings has the same variables (which it should)
+  const actualVariableNames = [...(actualBindingses[0]?.keys() ?? [])].map(
+    (v) => v.value
+  );
+
   const [expectedVariableNames = [], ...expectedBindingRows] = expected;
 
-  const expectedBindings = expectedBindingRows.map(
+  const expectedBindingses = expectedBindingRows.map(
     (row) =>
       bf.bindings(
         expectedVariableNames.map((name, i) => [
@@ -61,31 +85,13 @@ export const toBeBindingsEqualTo: MatcherFunction<
         // Type assertion to work around: https://github.com/comunica/comunica/pull/1200
       ) as unknown as Bindings
   );
-  const actualBindings = [...actual];
 
-  /** Returns true if the two sets of bindings contain the same information. */
-  const bindingsesMatch = (actual: Bindings[], expected: Bindings[]) => {
-    const sortedBindings = (bindings: Bindings[]): Bindings[] =>
-      sortBy(bindings, (b) =>
-        sortBy([...b.keys()], (v) => v.value).map((v) => termToString(b.get(v)))
-      );
+  const pass = bindingsesMatch(actualBindingses, expectedBindingses);
 
-    const sortedActual = sortedBindings(actual);
-    const sortedExpected = sortedBindings(expected);
-
-    return !zip(sortedActual, sortedExpected).find(([a, e]) => !a?.equals(e));
-  };
-
-  const pass = bindingsesMatch(actualBindings, expectedBindings);
-
-  const allVariableNames = new Set<string>();
-
-  for (const v of actualBindings[0]?.keys() || []) {
-    allVariableNames.add(v.value);
-  }
-  for (const name of expectedVariableNames) {
-    allVariableNames.add(name);
-  }
+  const allVariableNames = new Set<string>([
+    ...actualVariableNames,
+    ...expectedVariableNames,
+  ]);
 
   const sortedVariableNames = sortBy(
     [...allVariableNames],
@@ -119,7 +125,7 @@ export const toBeBindingsEqualTo: MatcherFunction<
   ];
 
   const { actual: actualData, expected: expectedData } = mapValues(
-    { actual: actualBindings, expected: expectedBindings },
+    { actual: actualBindingses, expected: expectedBindingses },
     tableData
   );
 
