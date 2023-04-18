@@ -54,6 +54,68 @@ const bindingsesMatch = (actual: Bindings[], expected: Bindings[]) => {
   return !zip(sortedActual, sortedExpected).find(([a, e]) => !a?.equals(e));
 };
 
+/**
+ * Returns an array of tables (as strings) presenting each bindingses given.
+ * The column widths will match across all tables, to make it easier to compare
+ * multple tables generated at once.
+ */
+export const bindingsTables = (
+  bindingseses: Bindings[][],
+  /**
+   * The columns will be ordered by these variable names. Variables not
+   * mentioned will appear in alphabetical order after these.
+   */
+  columnOrder: string[] = []
+) => {
+  const allVariableNames = new Set<string>();
+
+  for (const bindingses of bindingseses) {
+    for (const variable of [...(bindingses[0]?.keys() ?? [])]) {
+      allVariableNames.add(variable.value);
+    }
+  }
+
+  const sortedVariableNames = sortBy(
+    [...allVariableNames],
+    [
+      (varName) => {
+        const index = columnOrder.indexOf(varName);
+        return index === -1 ? columnOrder.length : index;
+      },
+      identity,
+    ]
+  );
+
+  // Tracks the longest widths of cells across both actual and expected, so they
+  // match.
+  const columnsConfig: Record<number, Mutable<ColumnUserConfig>> = {};
+
+  const tableData = (bindings: Bindings[]) => [
+    sortedVariableNames,
+    ...sortBy(
+      bindings.map((b) =>
+        sortedVariableNames.map((varName, i) => {
+          const value = termToString(b.get(varName)) ?? "";
+          const columnConfig = (columnsConfig[i] ??= {});
+          columnConfig.width = Math.max(
+            columnConfig.width ?? 1,
+            value.length,
+            varName.length
+          );
+          return value;
+        })
+      )
+    ),
+  ];
+
+  const makeTable = (data: string[][]) =>
+    `${data.length - 1} bindings:\n${table(data, {
+      columns: columnsConfig,
+    })}`;
+
+  return bindingseses.map(tableData).map(makeTable);
+};
+
 export const toBeBindingsEqualTo: MatcherFunction<
   [expectedBindings: ExpectedBindings]
 > = function (actual, expected) {
@@ -67,11 +129,6 @@ export const toBeBindingsEqualTo: MatcherFunction<
   const bf = new BindingsFactory(df);
 
   const actualBindingses = [...actual];
-
-  // We assume here that every Bindings has the same variables (which it should)
-  const actualVariableNames = [...(actualBindingses[0]?.keys() ?? [])].map(
-    (v) => v.value
-  );
 
   const [expectedVariableNames = [], ...expectedBindingRows] = expected;
 
@@ -88,56 +145,9 @@ export const toBeBindingsEqualTo: MatcherFunction<
 
   const pass = bindingsesMatch(actualBindingses, expectedBindingses);
 
-  const allVariableNames = new Set<string>([
-    ...actualVariableNames,
-    ...expectedVariableNames,
-  ]);
-
-  const sortedVariableNames = sortBy(
-    [...allVariableNames],
-    [
-      (varName) => {
-        const index = expectedVariableNames.indexOf(varName);
-        return index === -1 ? expectedVariableNames.length : index;
-      },
-      identity,
-    ]
-  );
-
-  // Tracks the longest widths of cells across both actual and expected, so they
-  // match.
-  const columnsConfig: Record<number, Mutable<ColumnUserConfig>> = {};
-
-  const tableData = (bindings: Bindings[]) => [
-    sortedVariableNames,
-    ...bindings.map((b) =>
-      sortedVariableNames.map((varName, i) => {
-        const value = termToString(b.get(varName)) ?? "";
-        const columnConfig = (columnsConfig[i] ??= {});
-        columnConfig.width = Math.max(
-          columnConfig.width ?? 1,
-          value.length,
-          varName.length
-        );
-        return value;
-      })
-    ),
-  ];
-
-  const { actual: actualData, expected: expectedData } = mapValues(
-    { actual: actualBindingses, expected: expectedBindingses },
-    tableData
-  );
-
-  const makeTable = (data: string[][]) => {
-    return `${data.length - 1} bindings:\n${table(data, {
-      columns: columnsConfig,
-    })}`;
-  };
-
-  const { actual: actualTable, expected: expectedTable } = mapValues(
-    { actual: actualData, expected: expectedData },
-    makeTable
+  const [actualTable, expectedTable] = bindingsTables(
+    [actualBindingses, expectedBindingses],
+    expectedVariableNames
   );
 
   return {
@@ -145,7 +155,6 @@ export const toBeBindingsEqualTo: MatcherFunction<
     pass,
   };
 };
-
 expect.extend({ toBeBindingsEqualTo });
 
 declare module "expect" {
