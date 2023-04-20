@@ -145,7 +145,45 @@ describe("toBeBindingsEqualTo", () => {
 `);
   });
 
-  it.todo("uses the row ordering given in the expected values");
+  it("sorts the rows", async () => {
+    const actual = await query(/* sparql */ `
+    SELECT ?a ?b ?c
+    WHERE {
+      VALUES (?a ?b ?c) {
+        ("1" "2" "3")
+        ("4" "5" "6")
+        ("7" "8" "9")
+      }
+    }
+  `);
+
+    const expected = [
+      ["a", "b", "c"],
+      [`"1"`, `"2"`, `"3"`],
+      [`"7"`, `"8"`, `"9"`],
+      [`"4"`, `"5"`, `"0"`],
+    ];
+
+    expect(run(actual, expected)).toMatchInlineSnapshot(`
+"expect(received).toBe(expected) // Object.is equality
+
+- Expected  - 1
++ Received  + 1
+
+@@ -2,10 +2,10 @@
+  ╔═════╤═════╤═════╗
+  ║ a   │ b   │ c   ║
+  ╟─────┼─────┼─────╢
+  ║ "1" │ "2" │ "3" ║
+  ╟─────┼─────┼─────╢
+- ║ "4" │ "5" │ "0" ║
++ ║ "4" │ "5" │ "6" ║
+  ╟─────┼─────┼─────╢
+  ║ "7" │ "8" │ "9" ║
+  ╚═════╧═════╧═════╝
+  ↵"
+`);
+  });
 
   it("matches column widths to keep the diff nice", async () => {
     const actual = await query(/* sparql */ `

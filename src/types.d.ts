@@ -44,7 +44,8 @@ declare module "@graphy/memory.dataset.fast" {
     InQuad extends BaseQuad = OutQuad
   >() => FastDataset<OutQuad, InQuad>) & { keys: symbol; quads: symbol };
 
-  export = dataset;
+  export default dataset;
+  export type { FastDataset };
 }
 
 // Because the DefinitelyTyped definitions are way out of date:

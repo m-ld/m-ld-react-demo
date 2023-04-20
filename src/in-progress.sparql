@@ -1,0 +1,156 @@
+PREFIX swapi: <https://swapi.dev/documentation#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT *
+WHERE {
+  {
+    BIND(swapi:master as ?p)
+    ?s ?p ?o .
+    ?s swapi:eye_color "blue" .
+    BIND("" as ?element)
+    BIND("" as ?rest)
+  }
+  UNION
+  {
+    BIND(swapi:vehicles as ?p)
+    ?s swapi:vehicles ?o .
+    ?o rdf:_rest* ?node .
+    ?node rdf:_first ?element .
+    ?node rdf:_rest ?rest .
+    ?s swapi:eye_color "blue" .
+  }
+  # {
+    # BOOKMARK: Why does this make the vehicle ones go away?
+    ?s swapi:eye_color "blue" .
+  # }
+}
+
+
+      PREFIX swapi: <https://swapi.dev/documentation#>
+      PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+      SELECT *
+      WHERE {
+      #   # {
+      #   #   BIND(swapi:master as ?p)
+      #   #   ?s ?p ?o .
+      #   #   ?s swapi:eye_color "blue" .
+      #   #   BIND("" as ?element)
+      #   #   BIND("" as ?rest)
+      #   # }
+      #   # UNION
+      #   # {
+      #   #   BIND(swapi:vehicles as ?p)
+      #   #   ?s swapi:vehicles ?o .
+      #   #   ?o rdf:rest* ?node .
+      #   #   ?node rdf:first ?element .
+      #   #   ?node rdf:rest ?rest .
+      #   #   ?s swapi:eye_color "blue" .
+      #   # }
+
+      #   {
+      #     VALUES ?p { swapi:name swapi:height swapi:master }
+      #     ?s ?p ?o .
+      #     ?s swapi:eye_color "blue" .
+      #   }
+      #   UNION
+      #   {
+      #     VALUES ?p { swapi:name }
+      #     ?s ?p ?o .
+      #     ?luke swapi:master ?s .
+      #     ?luke swapi:eye_color "blue" .
+      #   }
+        
+
+
+      #   # {
+      #     # BOOKMARK: Why does this make the vehicle ones go away?
+      #     # ?s swapi:eye_color "blue" .
+      #   # }
+      }
+
+      # SELECT
+      #   ?s
+      #   ?p
+      #   ?o
+      #   # # ?node
+      #   # # ?element
+      #   # # ?rest
+      #   # # ?fav
+      #   # #?apple·sauce
+      # WHERE {
+      #   # BOOKMARK: Can we somehow only bind ?s to the node we're looking at for its queries and then also bind it to deeper things later?
+      #   {
+      #     VALUES ?p1 { swapi:vehicles swapi:name swapi:favorite_vehicle }
+
+      #     # Parent filters
+      #     # BIND(<https://swapi.dev/api/people/2/> AS ?s)
+      #     ?s1 swapi:eye_color "blue" .
+
+      #     ?s1 ?p1 ?o1 .
+          
+      #       # Get value
+      #       BIND(?s1 AS ?s)
+      #       BIND(?p1 AS ?p)
+      #       BIND(?o1 AS ?o)
+      #       # ?s ?p ?o .
+      #     # UNION
+      #     # {
+      #     #   # FILTER(?p1 = swapi:favorite_vehicle)
+      #     #   # BIND(?o1 AS ?s2)
+      #     #   VALUES ?p2 { swapi:name }
+      #     #   # OPTIONAL {
+      #     #     ?s2 ?p2 ?o2 .
+      #     #     BIND(?s2 AS ?s)
+      #     #     BIND(?p2 AS ?p)
+      #     #     BIND(?o2 AS ?o)
+      #     #   # }
+      #     # }
+
+      #   }
+
+        # {
+        #   ?s swapi:favorite_vehicle/swapi:name ?o
+        # }
+        # ?s swapi:favorite_vehicle ?fav .
+
+        # If ?o is a list, get a binding for each node in the list.
+        # OPTIONAL {
+        #   ?o rdf:rest* ?node .
+        #   ?node rdf:first ?element .
+        #   ?node rdf:rest ?rest .
+
+        #   # OPTIONAL {
+        #   #   ?first swapi:name ?apple·sauce
+        #   # }
+        # }
+      # }
+    
+
+      # SELECT ?type ?s ?p ?o ?node ?first ?rest
+      # WHERE {
+      #   {
+      #     SELECT ?type ?s ?p ?o
+      #     WHERE {
+      #       BIND("property" AS ?type)
+      #       # BIND(<https://swapi.dev/api/people/1/> AS ?s)
+      #       BIND(swapi:eye_color AS ?p)
+      #       BIND("blue" AS ?o)
+      #       ?s ?p ?o .
+      #     }
+      #   }
+      #   UNION
+      #   {
+      #     SELECT ?type ?s ?p ?node ?first ?rest
+      #     WHERE {
+      #       BIND("list" AS ?type)
+      #       # BIND(<https://swapi.dev/api/people/1/> AS ?s)
+      #       BIND(swapi:vehicles AS ?p)
+      #       ?s ?p ?list .
+      #       ?list rdf:rest* ?node .
+      #       ?node rdf:first ?first .
+      #       ?node rdf:rest ?rest .
+      #     }
+      #   }
+      # }
+    

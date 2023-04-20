@@ -1,0 +1,29 @@
+# file: testdata.ttl
+
+PREFIX swapi: <https://swapi.dev/documentation#>
+
+# SELECT ?s ?p ?o
+# WHERE {
+#   {
+#     SELECT ?node ?first ?rest
+#     #<https://swapi.dev/api/people/1/> swapi:name ?name.
+#     WHERE {
+#       <https://swapi.dev/api/people/1/> swapi:vehicles ?list .
+#       ?list rdf:rest* ?node .
+#       ?node rdf:first ?first .
+#       ?node rdf:rest ?rest .
+#     }
+#   }
+  
+#   ?node rdf:first ?first.
+#   #?node rdf:rest ?rest.
+# }
+
+    SELECT ?node ?first ?rest
+    #<https://swapi.dev/api/people/1/> swapi:name ?name.
+    WHERE {
+      <https://swapi.dev/api/people/1/> swapi:vehicles ?list .
+      ?list rdf:rest* ?node .
+      ?node rdf:first ?first .
+      ?node rdf:rest ?rest .
+    }

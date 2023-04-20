@@ -112,6 +112,28 @@ const TodoFooter = ({
 );
 
 export default function Home() {
+  // const TODOS: ITodo[] = [
+  //   { id: "a", title: "Taste JavaScript", completed: true },
+  //   { id: "b", title: "Buy Unicorn", completed: false },
+  // ];
+
+  const query = {
+    "@context": {
+      "@base": "http://m-ld-react.todomvc.com/",
+      "@vocab": "https://todomvc.com/vocab/",
+    },
+    "@id": "todoMVCList",
+    items: {
+      "@list": {
+        "@context": {
+          "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
+        },
+        "@id": {},
+        completed: {},
+      },
+    },
+  };
+
   const nowShowing: string = ALL_TODOS;
 
   const todos = TODOS;

@@ -59,14 +59,14 @@ const bindingsesMatch = (actual: Bindings[], expected: Bindings[]) => {
  * The column widths will match across all tables, to make it easier to compare
  * multple tables generated at once.
  */
-export const bindingsTables = (
-  bindingseses: Bindings[][],
+export const bindingsTables = <BindingsesList extends Bindings[][]>(
+  bindingseses: BindingsesList,
   /**
    * The columns will be ordered by these variable names. Variables not
    * mentioned will appear in alphabetical order after these.
    */
   columnOrder: string[] = []
-) => {
+): { [I in keyof BindingsesList]: string } => {
   const allVariableNames = new Set<string>();
 
   for (const bindingses of bindingseses) {
@@ -90,10 +90,10 @@ export const bindingsTables = (
   // match.
   const columnsConfig: Record<number, Mutable<ColumnUserConfig>> = {};
 
-  const tableData = (bindings: Bindings[]) => [
+  const tableData = (bindingses: Bindings[]) => [
     sortedVariableNames,
     ...sortBy(
-      bindings.map((b) =>
+      bindingses.map((b) =>
         sortedVariableNames.map((varName, i) => {
           const value = termToString(b.get(varName)) ?? "";
           const columnConfig = (columnsConfig[i] ??= {});
@@ -113,7 +113,14 @@ export const bindingsTables = (
       columns: columnsConfig,
     })}`;
 
-  return bindingseses.map(tableData).map(makeTable);
+  const tables = bindingseses.map(tableData).map(makeTable);
+
+  // TypeScript isn't great at preserving tuple types through maps. We'll just
+  // assert to TS that we have this right (while letting it confirm that the
+  // value is at least a `string[]`).
+  return tables satisfies string[] as {
+    [I in keyof BindingsesList]: string;
+  };
 };
 
 export const toBeBindingsEqualTo: MatcherFunction<

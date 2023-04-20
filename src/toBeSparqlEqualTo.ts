@@ -21,7 +21,7 @@ const isSparqlAlgebraOperation = (o: unknown): o is Algebra.Operation =>
   "type" in o &&
   Object.values<unknown>(Algebra.types).indexOf(o.type) != -1;
 
-const isSparqlJs = (o: unknown): o is SparqlQuery => {
+const isSparqlJsSparqlQuery = (o: unknown): o is SparqlQuery => {
   return (
     !!o &&
     typeof o === "object" &&
@@ -45,13 +45,14 @@ const normalized = ({
   name: string;
   stringify: MatcherUtils["utils"]["stringify"];
 } & Partial<Pick<SparqlQuery, "base" | "prefixes">>): {
-  sparql: string;
+  sparqlJs: SparqlQuery;
+  string: string;
 } & Partial<Pick<SparqlQuery, "base" | "prefixes">> => {
   if (
     !(
       typeof value === "string" ||
       isSparqlAlgebraOperation(value) ||
-      isSparqlJs(value)
+      isSparqlJsSparqlQuery(value)
     )
   ) {
     throw new Error(
@@ -69,23 +70,40 @@ const normalized = ({
   // such a way that the only way to make matching possible is to always run
   // through it.
 
-  const sparqlString = isSparqlAlgebraOperation(value)
+  const incomingSparqlString = isSparqlAlgebraOperation(value)
     ? toSparql(value)
-    : isSparqlJs(value)
+    : isSparqlJsSparqlQuery(value)
     ? generator.stringify(value)
     : value;
 
-  const sparqlJs = parser.parse(sparqlString);
+  const sparqlJs = parser.parse(incomingSparqlString);
 
   if (base) sparqlJs.base = base;
   if (prefixes) sparqlJs.prefixes = prefixes;
 
   return {
-    sparql: generator.stringify(sparqlJs),
+    sparqlJs,
+    string: generator.stringify(sparqlJs),
     base: sparqlJs.base,
     prefixes: sparqlJs.prefixes,
   };
 };
+
+// TODO: Make an equality checker that's order-independent where appropriate.
+// function areSparqlEqual(a: unknown, b: unknown): boolean | undefined {
+//   const isAQuery = isSparqlJsSparqlQuery(a);
+//   const isBQuery = isSparqlJsSparqlQuery(b);
+
+//   if (isAQuery && isBQuery) {
+//     return a.equals(b);
+//   } else if (isAQuery !== isBQuery) {
+//     return false;
+//   } else {
+//     return undefined;
+//   }
+// }
+
+// expect.addEqualityTesters([areVolumesEqual]);
 
 const toBeSparqlEqualTo: MatcherFunction<[expectedSparql: unknown]> = function (
   actual,
@@ -93,7 +111,8 @@ const toBeSparqlEqualTo: MatcherFunction<[expectedSparql: unknown]> = function (
 ) {
   // Take the base and prefixes from the expected value...
   const {
-    sparql: expectedString,
+    sparqlJs: expectedSparqlJs,
+    string: expectedString,
     base,
     prefixes,
   } = normalized({
@@ -103,7 +122,7 @@ const toBeSparqlEqualTo: MatcherFunction<[expectedSparql: unknown]> = function (
   });
 
   // ...and use them when formatting the actual value.
-  const { sparql: actualString } = normalized({
+  const { sparqlJs: actualSparqlJs, string: actualString } = normalized({
     value: actual,
     name: "Actual",
     stringify: this.utils.stringify,
@@ -111,7 +130,11 @@ const toBeSparqlEqualTo: MatcherFunction<[expectedSparql: unknown]> = function (
     prefixes,
   });
 
-  return matchers.toBe.call(this, actualString, expectedString);
+  this.equals(expectedSparqlJs, actualSparqlJs);
+  return {
+    ...matchers.toBe.call(this, actualString, expectedString),
+    pass: this.equals(expectedSparqlJs, actualSparqlJs),
+  };
 };
 
 expect.extend({ toBeSparqlEqualTo });

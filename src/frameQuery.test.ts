@@ -1,15 +1,17 @@
-import { beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { beforeAll, describe, expect, it, jest, xit } from "@jest/globals";
 import { frameQuery, sparqlForFrame } from "./frameQuery";
 import { ContextDefinition, JsonLdDocument, toRDF } from "jsonld";
 import "./toBeSparqlEqualTo";
 import "./toBeBindingsEqualTo";
 import { kyPromise } from "@digitalbazaar/http-client";
 import { debug } from "./debug";
-import { Store, Writer } from "n3";
-import { Quad } from "@rdfjs/types";
+import { Parser, Store, Writer } from "n3";
+import { BaseQuad, Quad } from "@rdfjs/types";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs";
 import { ConsoleLogger } from "./logger";
 import { readAll } from "./readAll";
+import { bindingsTables } from "./toBeBindingsEqualTo";
+import { DataFactory } from "rdf-data-factory";
 
 // Workaround for jsonld.js: https://github.com/digitalbazaar/jsonld.js/issues/516#issuecomment-1485912565
 beforeAll(async () => {
@@ -407,7 +409,96 @@ WHERE {
     ]);
   });
 
-  it("FIGURE OUT QUERY", async () => {
+  it("REDUCE UNION BUG", async () => {
+    const input = /* turtle */ `
+@prefix swapi: <https://swapi.dev/documentation#> .
+
+<https://swapi.dev/api/vehicles/14/> swapi:model "t-47 airspeeder" .
+<https://swapi.dev/api/vehicles/30/> swapi:model "74-Z speeder bike" .
+<https://swapi.dev/api/vehicles/38/> swapi:model "Tribubble bongo" .
+
+<https://swapi.dev/api/people/1/>
+  swapi:name "Luke Skywalker" ;
+  swapi:hair_color "blond" ;
+  swapi:vehicles
+    <https://swapi.dev/api/vehicles/14/> ,
+    <https://swapi.dev/api/vehicles/30/> .
+
+<https://swapi.dev/api/people/10/>
+  swapi:name "Obi-Wan Kenobi" ;
+  swapi:hair_color "auburn, white" ;
+  swapi:vehicles
+    <https://swapi.dev/api/vehicles/38/> .
+`;
+
+    const sparqlQuery = /* sparql */ `
+PREFIX swapi: <https://swapi.dev/documentation#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT *
+WHERE {
+  ?luke swapi:hair_color "blond"
+
+  {
+    ?luke swapi:name ?o .
+    BIND(swapi:name AS ?p)
+    BIND(?luke AS ?s)
+  }
+  UNION
+  {
+    ?luke swapi:vehicles ?s .
+    ?s swapi:model ?o .
+    BIND(swapi:model AS ?p)
+  }
+}
+`;
+
+    function source(data: string) {
+      const store = new Store(new Parser().parse(data));
+      return store;
+    }
+
+    const bindingsStream = await engine.queryBindings(
+      // `SELECT * WHERE { ?s ?p ?o }`,
+      sparqlQuery,
+      {
+        sources: [source(input)],
+      }
+    );
+
+    const bindingses = await readAll(bindingsStream);
+
+    // const df = new DataFactory();
+    // const data = new Writer().quadsToString(
+    //   bindingses.map((b) =>
+    //     df.quad(
+    //       // @ts-ignore
+    //       b.get("s"),
+    //       b.get("p"),
+    //       b.get("o")
+    //     )
+    //   )
+    // );
+
+    // expect(data).toMatchInlineSnapshot()
+
+    expect(bindingsTables([bindingses], ["s", "p", "o"])[0])
+      .toMatchInlineSnapshot(`
+"3 bindings:
+╔═══════════════════════════════════════╤═════════════════════╤═════════════════════════════════╗
+║ p                                     │ o                   │ luke                            ║
+╟───────────────────────────────────────┼─────────────────────┼─────────────────────────────────╢
+║ https://swapi.dev/documentation#model │ "74-Z speeder bike" │ https://swapi.dev/api/people/1/ ║
+╟───────────────────────────────────────┼─────────────────────┼─────────────────────────────────╢
+║ https://swapi.dev/documentation#model │ "t-47 airspeeder"   │ https://swapi.dev/api/people/1/ ║
+╟───────────────────────────────────────┼─────────────────────┼─────────────────────────────────╢
+║ https://swapi.dev/documentation#name  │ "Luke Skywalker"    │ https://swapi.dev/api/people/1/ ║
+╚═══════════════════════════════════════╧═════════════════════╧═════════════════════════════════╝
+"
+`);
+  }, 5000);
+
+  it.only("FIGURE OUT QUERY", async () => {
     const query = {
       "@context": input["@context"],
       // For each person with blue eyes...
@@ -434,59 +525,70 @@ WHERE {
       },
     };
 
-    const inputQuads = await toRDF(input);
+    const debugBind = (varNames: string[]) =>
+      `BIND(concat(${varNames
+        .map(
+          (varName) => `"?${varName}: ", str(coalesce(?${varName}, "UNDEF"))`
+        )
+        .join(`, "; ", `)}) AS ?debug)`;
 
     const sparqlQuery = /* sparql */ `
       PREFIX swapi: <https://swapi.dev/documentation#>
       PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
       SELECT 
-        # *
-        ?s ?p ?o
+        *
+        # ?s ?p ?o
         # ?rest
       WHERE {
         # Pick our targets.
-        ?luke swapi:hair_color "blond"
+        ?root swapi:hair_color "blond" .
+        # ?root swapi:hair_color ?hair_color .
 
-        # Luke's name, height, and film ids
-        {
-          # Get the values.
+        # {
           {
-            ?s swapi:name ?o .
+            ?root swapi:name ?o .
             BIND(swapi:name AS ?p)
+            BIND(?root AS ?s)
+            ${debugBind(["s", "root"])}
           }
           UNION
           {
-            ?s swapi:height ?o .
+            ?root swapi:height ?o .
             BIND(swapi:height AS ?p)
+            BIND(?root AS ?s)
+            ${debugBind(["s", "root"])}
           }
-          UNION
-          {
-            ?s swapi:films ?o .
-            ?o swapi:director "George Lucas" .
-            BIND(swapi:films AS ?p)
-          }
+          # UNION
+          # {
+          #   ?root swapi:films ?o .
+          #   ?o swapi:director "George Lucas" .
+          #   BIND(swapi:films AS ?p)
+          #   # BIND(?o AS ?film)
+          #   # BIND(?root AS ?s)
+          #   ${debugBind(["s", "root"])}
+          # }
+        # }
+        # UNION
+        # # .films
+        # {
+        #   # Pick our targets.
+        #   ?root swapi:films ?s .
+        #   ?s swapi:director "George Lucas" .
 
-          BIND(?s AS ?luke)
-        }
-        UNION
-        # Luke's films' titles and release dates
-        {
-          # Pick our targets.
-          ?luke swapi:films ?s .
-          ?s swapi:director "George Lucas" .
-
-          # Get the values.
-          {
-            ?s swapi:title ?o .
-            BIND(swapi:title AS ?p)
-          }
-          UNION
-          {
-            ?s swapi:release_date ?o .
-            BIND(swapi:release_date AS ?p)
-          }
-        }
+        #   # Get the values.
+        #   {
+        #     ?s swapi:title ?o .
+        #     BIND(swapi:title AS ?p)
+        #   }
+        #   UNION
+        #   {
+        #     ?s swapi:release_date ?o .
+        #     BIND(swapi:release_date AS ?p)
+        #   }
+        #   # BIND(?s AS ?film)
+        #   ${debugBind(["s", "root"])}
+        # }
       }
     `;
 
@@ -498,99 +600,53 @@ WHERE {
 
     const bindingsStream = await engine.queryBindings(sparqlQuery, {
       sources: [source(await toRDF(input))],
-      log: new ConsoleLogger({ level: "debug" }),
+      log: new ConsoleLogger({ level: "warn" }),
     });
 
     const bindings = await readAll(bindingsStream);
 
     expect(bindings).toBeBindingsEqualTo([
       ["s", "p", "o"],
-      [
-        `https://swapi.dev/api/people/1/`,
-        `https://swapi.dev/documentation#name`,
-        `"Luke Skywalker"`,
-      ],
-      [
-        `https://swapi.dev/api/people/1/`,
-        `https://swapi.dev/documentation#height`,
-        `"172"`,
-      ],
-
-      [
-        "https://swapi.dev/api/people/1/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/1/`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#name",
-        `"Obi-Wan Kenobi"`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#height",
-        `"182"`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/1/`,
-      ],
-      [
-        "https://swapi.dev/api/vehicles/14/",
-        "https://swapi.dev/documentation#name",
-        `"Snowspeeder"`,
-      ],
-      [
-        "https://swapi.dev/api/vehicles/30/",
-        "https://swapi.dev/documentation#name",
-        `"Imperial Speeder Bike"`,
-      ],
-      [
-        "https://swapi.dev/api/vehicles/38/",
-        "https://swapi.dev/documentation#name",
-        `"Tribubble bongo"`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/4/`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/5/`,
-      ],
-      [
-        "https://swapi.dev/api/people/1/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/6/`,
-      ],
-      [
-        "https://swapi.dev/api/films/1/",
-        "https://swapi.dev/documentation#title",
-        `"A New Hope"`,
-      ],
-      [
-        "https://swapi.dev/api/people/10/",
-        "https://swapi.dev/documentation#films",
-        `https://swapi.dev/api/films/6/`,
-      ],
-      [
-        "https://swapi.dev/api/films/1/",
-        "https://swapi.dev/documentation#release_date",
-        `"1977-05-25"`,
-      ],
-      [
-        "https://swapi.dev/api/films/6/",
-        "https://swapi.dev/documentation#title",
-        `"Revenge of the Sith"`,
-      ],
-      [
-        "https://swapi.dev/api/films/6/",
-        "https://swapi.dev/documentation#release_date",
-        `"2005-05-19"`,
-      ],
+      // [
+      //   `https://swapi.dev/api/people/1/`,
+      //   `https://swapi.dev/documentation#name`,
+      //   `"Luke Skywalker"`,
+      // ],
+      //   [
+      //     `https://swapi.dev/api/people/1/`,
+      //     `https://swapi.dev/documentation#height`,
+      //     `"172"`,
+      //   ],
+      //   [
+      //     "https://swapi.dev/api/people/1/",
+      //     "https://swapi.dev/documentation#films",
+      //     `https://swapi.dev/api/films/1/`,
+      //   ],
+      //   [
+      //     "https://swapi.dev/api/people/1/",
+      //     "https://swapi.dev/documentation#films",
+      //     `https://swapi.dev/api/films/6/`,
+      //   ],
+      //   [
+      //     "https://swapi.dev/api/films/1/",
+      //     "https://swapi.dev/documentation#title",
+      //     `"A New Hope"`,
+      //   ],
+      //   [
+      //     "https://swapi.dev/api/films/1/",
+      //     "https://swapi.dev/documentation#release_date",
+      //     `"1977-05-25"`,
+      //   ],
+      //   [
+      //     "https://swapi.dev/api/films/6/",
+      //     "https://swapi.dev/documentation#title",
+      //     `"Revenge of the Sith"`,
+      //   ],
+      //   [
+      //     "https://swapi.dev/api/films/6/",
+      //     "https://swapi.dev/documentation#release_date",
+      //     `"2005-05-19"`,
+      //   ],
     ]);
   }, 5000);
 

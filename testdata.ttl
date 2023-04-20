@@ -1,0 +1,22 @@
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#eye_color> "blue" .
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#hair_color> "blond" .
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#height> "172" .
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#mass> "77" .
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#name> "Luke Skywalker" .
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#skin_color> "fair" .
+<l:n0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://swapi.dev/api/vehicles/14/> .
+<l:n0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <l:n1> .
+<l:n1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://swapi.dev/api/vehicles/30/> .
+<l:n1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <l:n2> .
+<l:n2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <https://swapi.dev/api/vehicles/40/> .
+<l:n2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .
+<https://swapi.dev/api/people/1/> <https://swapi.dev/documentation#vehicles> <l:n0> .
+<https://swapi.dev/api/vehicles/14/> <https://swapi.dev/documentation#manufacturer> "Incom corporation" .
+<https://swapi.dev/api/vehicles/14/> <https://swapi.dev/documentation#model> "t-47 airspeeder" .
+<https://swapi.dev/api/vehicles/14/> <https://swapi.dev/documentation#name> "Snowspeeder" .
+<https://swapi.dev/api/vehicles/30/> <https://swapi.dev/documentation#manufacturer> "Aratech Repulsor Company" .
+<https://swapi.dev/api/vehicles/30/> <https://swapi.dev/documentation#model> "74-Z speeder bike" .
+<https://swapi.dev/api/vehicles/30/> <https://swapi.dev/documentation#name> "Imperial Speeder Bike" .
+<https://swapi.dev/api/people/2/> <https://swapi.dev/documentation#vehicles> <lx:n0> .
+<lx:n0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#first> <ex:somethingElse> .
+<lx:n0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#rest> <http://www.w3.org/1999/02/22-rdf-syntax-ns#nil> .

@@ -1,0 +1,20 @@
+# No good: Rows multiply for every list/set.
+
+SELECT *
+WHERE {
+    ?_ swapi:eye_color "blue" .
+
+    ?_ swapi:favorite_vehicle ?favorite_vehicle .
+    ?favorite_vehicle swapi:name ?favorite_vehicle·name .
+
+    ?_ swapi:vehicles ?vehicles .
+    ?vehicles rdf:rest* ?vehicles·_node .
+    ?vehicles·_node rdf:first ?vehicles·_element .
+    ?vehicles·_node rdf:rest ?vehicles·_rest .
+
+    ?_ swapi:vehicles ?vehicles2 .
+    ?vehicles2 rdf:rest* ?vehicles2·_node .
+    ?vehicles2·_node rdf:first ?vehicles2·_element .
+    ?vehicles2·_node rdf:rest ?vehicles2·_rest .
+}
+
