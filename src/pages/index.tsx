@@ -1,6 +1,19 @@
 import classNames from "classnames";
 import { useState } from "react";
 
+type QueryResult<Query extends object> = {
+  [Key in keyof Query]: Query[Key] extends Array<unknown>
+    ? // TODO: Handle arrays in query.
+      never
+    : Query[Key] extends object
+    ? QueryResult<Query[Key]> | Array<QueryResult<Query[Key]>>
+    : // TODO: Support named variables.
+    Query[Key] extends "?"
+    ? // TODO: Everything a variable can be.
+      string | number
+    : Query[Key];
+};
+
 enum StatusFilter {
   All = "all",
   Active = "active",
@@ -32,6 +45,7 @@ const TodoItem = ({ id, editing }: ITodoItemProps) => {
       "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
     },
     "@id": id,
+    "@type": "icaltzd:Vtodo",
     status: "?",
     summary: "?",
   };
@@ -51,7 +65,7 @@ const TodoItem = ({ id, editing }: ITodoItemProps) => {
       status: "IN-PROCESS",
       summary: "Buy Unicorn",
     },
-  }[id];
+  }[id] satisfies QueryResult<typeof query> | undefined;
 
   if (!data) return <></>;
 
@@ -180,7 +194,7 @@ export default function Home() {
       },
       "@count": "?",
     },
-  };
+  } as const;
 
   const data = {
     "@context": query["@context"],
@@ -209,8 +223,9 @@ export default function Home() {
       },
       "@count": 1,
     },
-  };
+  } satisfies QueryResult<typeof query>;
 
+  // TODO: How do we know that activeItems and completedItems aren't arrays?
   const activeTodoCount = data.activeItems["@count"];
   const completedCount = data.completedItems["@count"];
   const shownTodos = data.items;
