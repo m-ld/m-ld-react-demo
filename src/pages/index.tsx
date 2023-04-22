@@ -48,7 +48,7 @@ const TodoItem = ({ id, editing }: ITodoItemProps) => {
     "@type": "icaltzd:Vtodo",
     status: "?",
     summary: "?",
-  };
+  } as const;
 
   const data = {
     "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8": {
@@ -57,15 +57,15 @@ const TodoItem = ({ id, editing }: ITodoItemProps) => {
       "@type": "icaltzd:Vtodo",
       status: "COMPLETED",
       summary: "Taste JavaScript",
-    },
+    } satisfies QueryResult<typeof query>,
     "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec": {
       "@context": query["@context"],
       "@id": "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec",
       "@type": "icaltzd:Vtodo",
       status: "IN-PROCESS",
       summary: "Buy Unicorn",
-    },
-  }[id] satisfies QueryResult<typeof query> | undefined;
+    } satisfies QueryResult<typeof query>,
+  }[id];
 
   if (!data) return <></>;
 
