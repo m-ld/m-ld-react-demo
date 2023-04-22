@@ -1,9 +1,12 @@
-import { useSubject } from "@/hooks/useSubject";
 import classNames from "classnames";
+import { useState } from "react";
 
-const ALL_TODOS = "all";
-const ACTIVE_TODOS = "active";
-const COMPLETED_TODOS = "completed";
+enum StatusFilter {
+  All = "all",
+  Active = "active",
+  Completed = "completed",
+}
+
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
 
@@ -13,63 +16,81 @@ interface ITodo {
   completed: boolean;
 }
 
-const TODOS: ITodo[] = [
-  { id: "a", title: "Taste JavaScript", completed: true },
-  { id: "b", title: "Buy Unicorn", completed: false },
-];
-
 interface ITodoItemProps {
-  key: string;
-  todo: ITodo;
+  id: string;
   editing?: boolean;
-  onSave: (val: any) => void;
-  onDestroy: () => void;
-  onEdit: () => void;
-  onCancel: (event: any) => void;
-  onToggle: () => void;
+  // onSave: (val: any) => void;
+  // onDestroy: () => void;
+  // onEdit: () => void;
+  // onCancel: (event: any) => void;
+  // onToggle: () => void;
 }
 
-const TodoItem = (props: ITodoItemProps) => (
-  <li
-    className={classNames({
-      completed: props.todo.completed,
-      editing: props.editing,
-    })}
-  >
-    <div className="view">
-      <input
-        className="toggle"
-        type="checkbox"
-        checked={props.todo.completed}
-        onChange={props.onToggle}
-      />
-      <label
-      // onDoubleClick={(e) => this.handleEdit()}
-      >
-        {props.todo.title}
-      </label>
-      <button className="destroy" onClick={props.onDestroy} />
-    </div>
-    <input
-      className="edit"
-      // value={this.state.editText}
-      // onBlur={(e) => this.handleSubmit(e)}
-      // onChange={(e) => this.handleChange(e)}
-      // onKeyDown={(e) => this.handleKeyDown(e)}
-    />
-  </li>
-);
+const TodoItem = ({ id, editing }: ITodoItemProps) => {
+  const query = {
+    "@context": {
+      "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
+    },
+    "@id": id,
+    status: "?",
+    summary: "?",
+  };
+
+  const data = {
+    "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8": {
+      "@context": query["@context"],
+      "@id": "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8",
+      "@type": "icaltzd:Vtodo",
+      status: "COMPLETED",
+      summary: "Taste JavaScript",
+    },
+    "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec": {
+      "@context": query["@context"],
+      "@id": "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec",
+      "@type": "icaltzd:Vtodo",
+      status: "IN-PROCESS",
+      summary: "Buy Unicorn",
+    },
+  }[id];
+
+  if (!data) return <></>;
+
+  const completed = data.status === "COMPLETED";
+
+  return (
+    <li
+      className={classNames({
+        completed: completed,
+        editing: editing,
+      })}
+    >
+      <div className="view">
+        <input
+          className="toggle"
+          type="checkbox"
+          checked={completed}
+          // onChange={onToggle}
+        />
+        <label>{data.summary}</label>
+        <button
+          className="destroy"
+          // onClick={onDestroy}
+        />
+      </div>
+      <input className="edit" />
+    </li>
+  );
+};
 
 interface ITodoFooterProps {
   completedCount: number;
-  onClearCompleted: any;
+  // onClearCompleted: any;
   nowShowing: string;
   count: number;
 }
 
 const TodoFooter = ({
   completedCount,
-  onClearCompleted,
   nowShowing,
   count,
 }: ITodoFooterProps) => (
@@ -81,7 +102,7 @@ const TodoFooter = ({
       <li>
         <a
           href="#/"
-          className={classNames({ selected: nowShowing === ALL_TODOS })}
+          className={classNames({ selected: nowShowing === StatusFilter.All })}
         >
           All
         </a>
@@ -89,7 +110,9 @@ const TodoFooter = ({
       <li>
         <a
           href="#/active"
-          className={classNames({ selected: nowShowing === ACTIVE_TODOS })}
+          className={classNames({
+            selected: nowShowing === StatusFilter.Active,
+          })}
         >
           Active
         </a>
@@ -97,14 +120,19 @@ const TodoFooter = ({
       <li>
         <a
           href="#/completed"
-          className={classNames({ selected: nowShowing === COMPLETED_TODOS })}
+          className={classNames({
+            selected: nowShowing === StatusFilter.Completed,
+          })}
         >
           Completed
         </a>
       </li>
     </ul>
     {!!completedCount && (
-      <button className="clear-completed" onClick={onClearCompleted}>
+      <button
+        className="clear-completed"
+        // onClick={onClearCompleted}
+      >
         Clear completed
       </button>
     )}
@@ -112,23 +140,80 @@ const TodoFooter = ({
 );
 
 export default function Home() {
-  const nowShowing: string = ALL_TODOS;
+  const [nowShowing, setNowShowing] = useState(StatusFilter.All);
 
-  const todos = TODOS;
+  const query = {
+    "@context": {
+      "@vocab": "https://todomvc.com/vocab/",
+      icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+      items: {
+        "@container": "@list",
+      },
+      activeItems: "items",
+      completedItems: "items",
+      "icaltzd:Vtodo": {
+        "@context": {
+          "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
+        },
+      },
+    },
+    "@id": "todoMVCList",
+    items: {
+      "@id": "?",
+      "@type": "icaltzd:Vtodo",
+      ...(nowShowing !== StatusFilter.All && {
+        status:
+          nowShowing === StatusFilter.Completed ? "COMPLETED" : "IN-PROGRESS",
+      }),
+    },
+    activeItems: {
+      "@where": {
+        "@type": "icaltzd:Vtodo",
+        status: "IN-PROGRESS",
+      },
+      "@count": "?",
+    },
+    completedItems: {
+      "@where": {
+        "@type": "icaltzd:Vtodo",
+        status: "COMPLETED",
+      },
+      "@count": "?",
+    },
+  };
 
-  var activeTodoCount = todos.filter((todo) => todo.completed).length;
-  var completedCount = todos.length - activeTodoCount;
+  const data = {
+    "@context": query["@context"],
+    "@id": "todoMVCList",
+    items: [
+      {
+        "@id": "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8",
+        "@type": "icaltzd:Vtodo",
+      },
+      {
+        "@id": "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec",
+        "@type": "icaltzd:Vtodo",
+      },
+    ],
+    activeItems: {
+      "@where": {
+        "@type": "icaltzd:Vtodo",
+        status: "IN-PROGRESS",
+      },
+      "@count": 1,
+    },
+    completedItems: {
+      "@where": {
+        "@type": "icaltzd:Vtodo",
+        status: "COMPLETED",
+      },
+      "@count": 1,
+    },
+  };
 
-  var shownTodos = todos.filter((todo) => {
-    switch (nowShowing) {
-      case ACTIVE_TODOS:
-        return !todo.completed;
-      case COMPLETED_TODOS:
-        return todo.completed;
-      default:
-        return true;
-    }
-  });
+  const activeTodoCount = data.activeItems["@count"];
+  const completedCount = data.completedItems["@count"];
+  const shownTodos = data.items;
 
   return (
     <div>
@@ -141,7 +226,7 @@ export default function Home() {
           autoFocus={true}
         />
       </header>
-      {!!todos.length && (
+      {!!data.items.length && (
         <section className="main">
           <input
             id="toggle-all"
@@ -153,7 +238,7 @@ export default function Home() {
           <label htmlFor="toggle-all">Mark all as complete</label>
           <ul className="todo-list">
             {shownTodos.map((todo) => (
-              <TodoItem key={todo.id} todo={todo} />
+              <TodoItem key={todo["@id"]} id={todo["@id"]} />
             ))}
           </ul>
         </section>

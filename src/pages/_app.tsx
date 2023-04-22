@@ -29,12 +29,14 @@ const initialDataPromise = compact(
     "@type": "TodoList",
     items: [
       {
+        "@id": "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8",
         "@type": "icaltzd:Vtodo",
         status: "COMPLETED",
         summary: "Taste JavaScript",
         uid: "DB2CCFFD-1B37-4CA4-81B9-D724DFB70BA8",
       },
       {
+        "@id": "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec",
         "@type": "icaltzd:Vtodo",
         status: "IN-PROCESS",
         summary: "Buy Unicorn",
