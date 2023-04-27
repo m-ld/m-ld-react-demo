@@ -1,18 +1,6 @@
 import classNames from "classnames";
 import { useState } from "react";
-
-type QueryResult<Query extends object> = {
-  [Key in keyof Query]: Query[Key] extends Array<unknown>
-    ? // TODO: Handle arrays in query.
-      never
-    : Query[Key] extends object
-    ? QueryResult<Query[Key]> | Array<QueryResult<Query[Key]>>
-    : // TODO: Support named variables.
-    Query[Key] extends "?"
-    ? // TODO: Everything a variable can be.
-      string | number
-    : Query[Key];
-};
+import { QueryResult } from "../QueryResult";
 
 enum StatusFilter {
   All = "all",
@@ -172,18 +160,23 @@ export default function Home() {
       },
     },
     "@id": "todoMVCList",
-    items: {
-      "@id": "?",
-      "@type": "icaltzd:Vtodo",
-      ...(nowShowing !== StatusFilter.All && {
-        status:
-          nowShowing === StatusFilter.Completed ? "COMPLETED" : "IN-PROGRESS",
-      }),
-    },
+    items: [
+      {
+        "@id": "?",
+        "@type": "icaltzd:Vtodo",
+        status: (
+          {
+            [StatusFilter.All]: "?",
+            [StatusFilter.Active]: "IN-PROCESS",
+            [StatusFilter.Completed]: "COMPLETED",
+          } as const
+        )[nowShowing],
+      },
+    ],
     activeItems: {
       "@where": {
         "@type": "icaltzd:Vtodo",
-        status: "IN-PROGRESS",
+        status: "IN-PROCESS",
       },
       "@count": "?",
     },
@@ -203,16 +196,18 @@ export default function Home() {
       {
         "@id": "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8",
         "@type": "icaltzd:Vtodo",
+        status: "COMPLETED",
       },
       {
         "@id": "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec",
         "@type": "icaltzd:Vtodo",
+        status: "IN-PROCESS",
       },
     ],
     activeItems: {
       "@where": {
         "@type": "icaltzd:Vtodo",
-        status: "IN-PROGRESS",
+        status: "IN-PROCESS",
       },
       "@count": 1,
     },
@@ -225,7 +220,6 @@ export default function Home() {
     },
   } satisfies QueryResult<typeof query>;
 
-  // TODO: How do we know that activeItems and completedItems aren't arrays?
   const activeTodoCount = data.activeItems["@count"];
   const completedCount = data.completedItems["@count"];
   const shownTodos = data.items;
