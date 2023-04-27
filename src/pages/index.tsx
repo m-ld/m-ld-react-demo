@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import { useState } from "react";
 import { QueryResult } from "../QueryResult";
+import { PropertyTypes } from "./_app";
 
 enum StatusFilter {
   All = "all",
@@ -218,7 +219,7 @@ export default function Home() {
       },
       "@count": 1,
     },
-  } satisfies QueryResult<typeof query>;
+  } satisfies QueryResult<typeof query, PropertyTypes>;
 
   const activeTodoCount = data.activeItems["@count"];
   const completedCount = data.completedItems["@count"];
