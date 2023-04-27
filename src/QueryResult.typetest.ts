@@ -4,13 +4,17 @@ import { QueryResult, Scalar } from "./QueryResult";
 const query = {
   aNumber: 1,
   aString: "a",
-  aVariable: "?",
+  aNumberVariable: "?",
+  aStringVariable: "?",
+  anUnknownVariable: "?",
   aCollectionOfScalars: ["?"],
 
   aChild: {
     aNumber: 1,
     aString: "a",
-    aVariable: "?",
+    aNumberVariable: "?",
+    aStringVariable: "?",
+    anUnknownVariable: "?",
     aCollectionOfScalars: ["?"],
   },
 
@@ -18,7 +22,9 @@ const query = {
     {
       aNumber: 1,
       aString: "a",
-      aVariable: "?",
+      aNumberVariable: "?",
+      aStringVariable: "?",
+      anUnknownVariable: "?",
       aCollectionOfScalars: ["?"],
     },
   ],
@@ -27,12 +33,10 @@ const query = {
     {
       aNumber: 1,
       aString: "a",
-      aVariable: "?",
     },
     {
       aNumber: 2,
       aString: "b",
-      aVariable: "?",
     },
   ],
 
@@ -41,7 +45,9 @@ const query = {
       {
         aNumber: 1,
         aString: "a",
-        aVariable: "?",
+        aNumberVariable: "?",
+        aStringVariable: "?",
+        anUnknownVariable: "?",
         aCollectionOfScalars: ["?"],
       },
     ],
@@ -49,16 +55,28 @@ const query = {
   },
 } as const;
 
-type Result = QueryResult<typeof query>;
+interface PropertyTypes {
+  aNumberVariable: number;
+  aStringVariable: string;
+}
+
+type Result = QueryResult<typeof query, PropertyTypes>;
 
 true satisfies Equal<Result["aNumber"], 1>;
 true satisfies Equal<Result["aString"], "a">;
-true satisfies Equal<Result["aVariable"], Scalar>;
+true satisfies Equal<Result["aNumberVariable"], number>;
+true satisfies Equal<Result["aStringVariable"], string>;
+true satisfies Equal<Result["anUnknownVariable"], Scalar>;
 true satisfies Equal<Result["aCollectionOfScalars"], Scalar[]>;
 
 type Child = Pick<
   Result,
-  "aNumber" | "aString" | "aVariable" | "aCollectionOfScalars"
+  | "aNumber"
+  | "aString"
+  | "aNumberVariable"
+  | "aStringVariable"
+  | "anUnknownVariable"
+  | "aCollectionOfScalars"
 >;
 
 true satisfies Equal<Result["aChild"], Child>;
@@ -78,12 +96,10 @@ true satisfies Equal<
     | {
         aNumber: 1;
         aString: "a";
-        aVariable: Scalar;
       }
     | {
         aNumber: 2;
         aString: "b";
-        aVariable: Scalar;
       }
   >
 >;
