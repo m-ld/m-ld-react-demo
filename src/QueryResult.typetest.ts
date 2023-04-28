@@ -1,35 +1,79 @@
-import { type Equal } from "type-plus";
-import { QueryResult, Scalar } from "./QueryResult";
+import { Query, QueryResult, Scalar, Variable } from "./QueryResult";
+import { Equal } from "./testUtils/Equal";
 
-const query = {
+interface PropertyTypes {
+  aNumber: number;
+  multipleNumbers: number;
+  aString: string;
+  multipleStrings: string;
+  aNumberVariable: number;
+  aStringVariable: string;
+  anArrayOfString: string;
+}
+
+type AQuery = Query<PropertyTypes>;
+
+// A non-array query specifically, which is easier to ask questions about if we
+// separate it first.
+type AQueryObjectNode = Exclude<AQuery, unknown[]>;
+
+// Super short way to write "single element or array of"
+type A<T> = T | ReadonlyArray<T>;
+
+true satisfies Equal<AQueryObjectNode["anUnknown"], A<Scalar | AQuery>>;
+true satisfies Equal<AQueryObjectNode["multipleUnknowns"], A<Scalar | AQuery>>;
+true satisfies Equal<
+  AQueryObjectNode["aNumber"],
+  A<number | Variable> | undefined
+>;
+true satisfies Equal<AQueryObjectNode["aString"], A<string> | undefined>;
+true satisfies Equal<
+  AQueryObjectNode["aNumberVariable"],
+  A<number | Variable> | undefined
+>;
+true satisfies Equal<
+  AQueryObjectNode["aStringVariable"],
+  A<string> | undefined
+>;
+true satisfies Equal<AQueryObjectNode["anUnknownVariable"], A<Scalar | AQuery>>;
+true satisfies Equal<
+  AQueryObjectNode["anArrayOfString"],
+  A<string> | undefined
+>;
+true satisfies Equal<AQueryObjectNode["anArrayOfUnknown"], A<Scalar | AQuery>>;
+
+declare function doQuery<Q extends AQuery>(
+  query: Q
+): QueryResult<Q, PropertyTypes>;
+
+const result = doQuery({
+  anUnknown: 5,
+  multipleUnknowns: [1, "a"],
   aNumber: 1,
+  multipleNumbers: [1, 2],
   aString: "a",
+  multipleStrings: ["a", "b"],
   aNumberVariable: "?",
   aStringVariable: "?",
   anUnknownVariable: "?",
-  aCollectionOfScalars: ["?"],
+  anArrayOfString: ["?"],
+  anArrayOfUnknown: ["?"],
 
   aChild: {
     aNumber: 1,
-    aString: "a",
     aNumberVariable: "?",
-    aStringVariable: "?",
-    anUnknownVariable: "?",
-    aCollectionOfScalars: ["?"],
+    anArrayOfString: ["?"],
   },
 
-  aCollectionOfChildren: [
+  anArrayOfChildren: [
     {
       aNumber: 1,
-      aString: "a",
       aNumberVariable: "?",
-      aStringVariable: "?",
-      anUnknownVariable: "?",
-      aCollectionOfScalars: ["?"],
+      anArrayOfString: ["?"],
     },
   ],
 
-  aUnionCollectionOfChildren: [
+  aUnionOfChildren: [
     {
       aNumber: 1,
       aString: "a",
@@ -44,54 +88,35 @@ const query = {
     "@set": [
       {
         aNumber: 1,
-        aString: "a",
         aNumberVariable: "?",
-        aStringVariable: "?",
-        anUnknownVariable: "?",
-        aCollectionOfScalars: ["?"],
+        anArrayOfString: ["?"],
       },
     ],
     "@count": "?",
   },
-} as const;
+} as const);
 
-interface PropertyTypes {
-  aNumberVariable: number;
-  aStringVariable: string;
-}
+type Result = typeof result;
 
-type Result = QueryResult<typeof query, PropertyTypes>;
-
+true satisfies Equal<Result["anUnknown"], 5>;
+true satisfies Equal<Result["multipleUnknowns"], Array<1 | "a">>;
 true satisfies Equal<Result["aNumber"], 1>;
+true satisfies Equal<Result["multipleNumbers"], Array<1 | 2>>;
 true satisfies Equal<Result["aString"], "a">;
+true satisfies Equal<Result["multipleStrings"], Array<"a" | "b">>;
 true satisfies Equal<Result["aNumberVariable"], number>;
 true satisfies Equal<Result["aStringVariable"], string>;
 true satisfies Equal<Result["anUnknownVariable"], Scalar>;
-true satisfies Equal<Result["aCollectionOfScalars"], Scalar[]>;
+true satisfies Equal<Result["anArrayOfString"], string[]>;
+true satisfies Equal<Result["anArrayOfUnknown"], Scalar[]>;
 
-type Child = Pick<
-  Result,
-  | "aNumber"
-  | "aString"
-  | "aNumberVariable"
-  | "aStringVariable"
-  | "anUnknownVariable"
-  | "aCollectionOfScalars"
->;
+type Child = Pick<Result, "aNumber" | "aNumberVariable" | "anArrayOfString">;
 
 true satisfies Equal<Result["aChild"], Child>;
-true satisfies Equal<Result["aCollectionOfChildren"], Child[]>;
+true satisfies Equal<Result["anArrayOfChildren"], Child[]>;
 
 true satisfies Equal<
-  Result["aSetOfChildren"],
-  {
-    "@set": Child[];
-    "@count": number;
-  }
->;
-
-true satisfies Equal<
-  Result["aUnionCollectionOfChildren"],
+  Result["aUnionOfChildren"],
   Array<
     | {
         aNumber: 1;
@@ -102,4 +127,12 @@ true satisfies Equal<
         aString: "b";
       }
   >
+>;
+
+true satisfies Equal<
+  Result["aSetOfChildren"],
+  {
+    "@set": Child[];
+    "@count": number;
+  }
 >;
