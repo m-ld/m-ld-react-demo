@@ -1,4 +1,5 @@
 import { JsonLDDocument } from "./JsonLDDocument";
+import { Equal } from "./testUtils/Equal";
 
 interface PropertyTypes {
   "http://www.example.com/aNumber": number;
@@ -48,3 +49,37 @@ acceptDocument({
   // @ts-expect-error
   alsoANumber: "a",
 });
+
+/////
+
+declare const empty: unique symbol;
+
+type Empty = {
+  [empty]?: undefined;
+};
+
+type Foo<Context> = { "@context": Context } | { [K in "@context"]: never };
+
+// true satisfies Equal<Foo<Empty>, { "@context"?: Empty }>;
+
+({} satisfies Foo<Empty>);
+({ "@context": {} } satisfies Foo<Empty>);
+// @ts-expect-error
+({ "@context": { a: 1 } } satisfies Foo<Empty>);
+({ "@context": { a: "ex:a" } } satisfies Foo<{ a: "ex:a" }>);
+// @ts-expect-error
+({} satisfies Foo<{ a: "ex:a" }>);
+
+type A = { a: never };
+
+type StringLiteral = self extends string
+  ? string extends self
+    ? Never<`Type '${Print<self>}' is not assignable to type 'StringLiteral'`>
+    : self
+  : string;
+
+function takesLiteral(l: StringLiteral): void {}
+
+takesLiteral("abc");
+declare const str: string;
+takesLiteral(str);
