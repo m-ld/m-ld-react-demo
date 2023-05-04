@@ -8,6 +8,9 @@ type _JsonLDDocument<PropertyTypes, Context> = {
   [K in keyof PropertyTypes]?: PropertyTypes[K];
 } & { [key: Iri<string, string>]: unknown };
 
-export type JsonLDDocument<PropertyTypes, Context> = {
-  "@context": Context;
-} & _JsonLDDocument<PropertyTypes, Context>;
+export type JsonLDDocument<PropertyTypes> = self extends {
+  "@context": infer Context;
+  [k: string]: any;
+}
+  ? { "@context": Context } & _JsonLDDocument<PropertyTypes, Context>
+  : _JsonLDDocument<PropertyTypes, {}>;

@@ -13,7 +13,7 @@ interface PropertyTypes {
 
 const createAcceptor =
   <PropertyTypes>() =>
-  <Context>(d: JsonLDDocument<PropertyTypes, Context>) => {};
+  (d: JsonLDDocument<PropertyTypes>) => {};
 
 // A function to take documents (and thus do some type inference)
 const acceptDocument = createAcceptor<PropertyTypes>();
@@ -46,40 +46,77 @@ acceptDocument({
     alsoANumber: "http://www.example.com/aNumber",
   } as const,
   aNumber: 1,
-  // @ts-expect-error
+  alsoANumber: 1,
+});
+
+// @ts-expect-error
+acceptDocument({
+  "@context": {
+    aNumber: "http://www.example.com/aNumber",
+    alsoANumber: "http://www.example.com/aNumber",
+  } as const,
   alsoANumber: "a",
 });
 
 /////
 
-declare const empty: unique symbol;
+// declare const empty: unique symbol;
 
-type Empty = {
-  [empty]?: undefined;
-};
+// type Empty = {
+//   [empty]?: undefined;
+// };
 
-type Foo<Context> = { "@context": Context } | { [K in "@context"]: never };
+// type Foo<Context> = { "@context": Context } | { [K in "@context"]: never };
 
-// true satisfies Equal<Foo<Empty>, { "@context"?: Empty }>;
+// // true satisfies Equal<Foo<Empty>, { "@context"?: Empty }>;
 
-({} satisfies Foo<Empty>);
-({ "@context": {} } satisfies Foo<Empty>);
-// @ts-expect-error
-({ "@context": { a: 1 } } satisfies Foo<Empty>);
-({ "@context": { a: "ex:a" } } satisfies Foo<{ a: "ex:a" }>);
-// @ts-expect-error
-({} satisfies Foo<{ a: "ex:a" }>);
+// ({} satisfies Foo<Empty>);
+// ({ "@context": {} } satisfies Foo<Empty>);
+// // @ts-expect-error
+// ({ "@context": { a: 1 } } satisfies Foo<Empty>);
+// ({ "@context": { a: "ex:a" } } satisfies Foo<{ a: "ex:a" }>);
+// // @ts-expect-error
+// ({} satisfies Foo<{ a: "ex:a" }>);
 
-type A = { a: never };
+// type A = { a: never };
 
-type StringLiteral = self extends string
-  ? string extends self
-    ? Never<`Type '${Print<self>}' is not assignable to type 'StringLiteral'`>
-    : self
-  : string;
+// type StringLiteral = self extends string
+//   ? string extends self
+//     ? Never<`Type '${Print<self>}' is not assignable to type 'StringLiteral'`>
+//     : self
+//   : string;
 
-function takesLiteral(l: StringLiteral): void {}
+// function takesLiteral(l: StringLiteral): void {}
 
-takesLiteral("abc");
-declare const str: string;
-takesLiteral(str);
+// takesLiteral("abc");
+// declare const str: string;
+// takesLiteral(str);
+
+// // type Bar =
+
+// // const b: Bar = {};
+
+// type B = {
+//   "@context": { readonly aNumber: "http://www.example.com/aNumber" };
+//   aNumber: number;
+//   "http://www.example.com/aNumber": number;
+//   "http://www.example.com/unknown": number;
+// } extends { "@context": {} }
+//   ? true
+//   : false;
+
+// type Foo = self extends {
+//   "@context": infer Context;
+//   [k: string]: any;
+// }
+//   ? Print<Context>
+//   : Print<{}>;
+
+// const aDoc: Foo = {
+//   "@context": {
+//     aNumber: "http://www.example.com/aNumber",
+//   } as const,
+//   // aNumber: 1,
+//   // "http://www.example.com/aNumber": 2,
+//   // "http://www.example.com/unknown": 2,
+// };
