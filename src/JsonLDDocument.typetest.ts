@@ -1,4 +1,4 @@
-import { JsonLDDocument } from "./JsonLDDocument";
+import { JsonLDDocument, NodeObject } from "./JsonLDDocument";
 import { Equal } from "./testUtils/Equal";
 
 interface PropertyTypes {
@@ -29,15 +29,21 @@ acceptDocument({
 
 // It should accept unknown Iri properties
 acceptDocument({ "@context": {}, "http://www.example.com/unknown": 1 });
+acceptDocument({ "http://www.example.com/unknown": 1 });
 
 // It should not accept unknown non-Iri properties
 // @ts-expect-error
 acceptDocument({ "@context": {}, unknown: 1 });
+// @ts-expect-error
+acceptDocument({ unknown: 1 });
 
 // It should accept known Iri properties, and type them
 acceptDocument({ "@context": {}, "http://www.example.com/aNumber": 1 });
+acceptDocument({ "http://www.example.com/aNumber": 1 });
 // @ts-expect-error
 acceptDocument({ "@context": {}, "http://www.example.com/aNumber": "a" });
+// @ts-expect-error
+acceptDocument({ "http://www.example.com/aNumber": "a" });
 
 // It should alias properties using the @context
 acceptDocument({
@@ -58,65 +64,30 @@ acceptDocument({
   alsoANumber: "a",
 });
 
-/////
+// It should cascade the context.
+acceptDocument({
+  "@context": {
+    aNumber: "http://www.example.com/aNumber",
+    somethingElse: "http://www.example.com/somethingElse",
+  } as const,
+  aNumber: 1,
+  somethingElse: {
+    // "@context": {
+    //   aString: "http://www.example.com/aString",
+    // } as const,
+    // aNumber: 1,
+    // aString: "a",
+    // @ts-expect-erro/r
+    // unknown: 2,
+  },
+});
 
-// declare const empty: unique symbol;
-
-// type Empty = {
-//   [empty]?: undefined;
-// };
-
-// type Foo<Context> = { "@context": Context } | { [K in "@context"]: never };
-
-// // true satisfies Equal<Foo<Empty>, { "@context"?: Empty }>;
-
-// ({} satisfies Foo<Empty>);
-// ({ "@context": {} } satisfies Foo<Empty>);
-// // @ts-expect-error
-// ({ "@context": { a: 1 } } satisfies Foo<Empty>);
-// ({ "@context": { a: "ex:a" } } satisfies Foo<{ a: "ex:a" }>);
-// // @ts-expect-error
-// ({} satisfies Foo<{ a: "ex:a" }>);
-
-// type A = { a: never };
-
-// type StringLiteral = self extends string
-//   ? string extends self
-//     ? Never<`Type '${Print<self>}' is not assignable to type 'StringLiteral'`>
-//     : self
-//   : string;
-
-// function takesLiteral(l: StringLiteral): void {}
-
-// takesLiteral("abc");
-// declare const str: string;
-// takesLiteral(str);
-
-// // type Bar =
-
-// // const b: Bar = {};
-
-// type B = {
-//   "@context": { readonly aNumber: "http://www.example.com/aNumber" };
-//   aNumber: number;
-//   "http://www.example.com/aNumber": number;
-//   "http://www.example.com/unknown": number;
-// } extends { "@context": {} }
-//   ? true
-//   : false;
-
-// type Foo = self extends {
-//   "@context": infer Context;
-//   [k: string]: any;
-// }
-//   ? Print<Context>
-//   : Print<{}>;
-
-// const aDoc: Foo = {
-//   "@context": {
-//     aNumber: "http://www.example.com/aNumber",
-//   } as const,
-//   // aNumber: 1,
-//   // "http://www.example.com/aNumber": 2,
-//   // "http://www.example.com/unknown": 2,
-// };
+// Type '{}' is not assignable to type '
+// type A = NodeObject<
+//   PropertyTypes,
+//   {
+//     readonly aNumber: "http://www.example.com/aNumber";
+//     readonly somethingElse: "http://www.example.com/somethingElse";
+//   }
+// >;
+// const a: A = {};
