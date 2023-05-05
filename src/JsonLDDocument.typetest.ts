@@ -1,5 +1,4 @@
 import { JsonLDDocument } from "./JsonLDDocument";
-import { Equal } from "./testUtils/Equal";
 
 interface PropertyTypes {
   "http://www.example.com/aNumber": number;
@@ -27,14 +26,10 @@ acceptDocument({
   "http://www.example.com/unknown": 2,
 });
 
-// It should accept unknown Iri properties
+// It should accept unknown properties
 acceptDocument({ "http://www.example.com/unknown": 1 });
 acceptDocument({ "@context": {}, "http://www.example.com/unknown": 1 });
-
-// It should not accept unknown non-Iri properties
-// @ts-expect-error
 acceptDocument({ unknown: 1 });
-// @ts-expect-erro/r
 acceptDocument({ "@context": {}, unknown: 1 });
 
 // It should accept known Iri properties, and type them
@@ -67,16 +62,22 @@ acceptDocument({
 acceptDocument({
   "@context": {
     aNumber: "http://www.example.com/aNumber",
+    somethingElse: "http://www.example.com/somethingElse",
   } as const,
+  // @ts-expect-error
+  aNumber: "a",
   // No error because it's not mapped to anything here.
   alsoANumber: "a",
-  aNumber: 1,
-  // somethingElse: {
-  //   "@context": {
-  //     alsoANumber: "http://www.example.com/aNumber",
-  //   } as const,
-  //   // Error because here it's something that needs to be a number
-  //   // @ts-expect-error
-  //   alsoANumber: "a",
-  // },
+
+  somethingElse: {
+    "@context": {
+      alsoANumber: "http://www.example.com/aNumber",
+    } as const,
+    // aNumber is still mapped
+    // @ts-expect-error
+    aNumber: "a",
+    // and so is alsoANumber
+    // @ts-expect-error
+    alsoANumber: "a",
+  },
 });

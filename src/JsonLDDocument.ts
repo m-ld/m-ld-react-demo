@@ -1,22 +1,26 @@
 type Iri<Prefix extends string, Suffix extends string> = `${Prefix}:${Suffix}`;
 
-type _JsonLDDocument<PropertyTypes, ActiveContext> = {
+type _NodeObject<PropertyTypes, ActiveContext, Self> = {
   [K in keyof ActiveContext]?: ActiveContext[K] extends keyof PropertyTypes
     ? PropertyTypes[ActiveContext[K]]
-    : unknown;
+    : K extends keyof Self
+    ? NodeObject<PropertyTypes, ActiveContext, Self[K]>
+    : never;
 } & {
   [K in keyof PropertyTypes]?: PropertyTypes[K];
-} & { [K in string]: K extends "@context" ? {} : string | number };
+};
 
-type NextContext<OuterContext, InnerContext> = InnerContext;
+type NextContext<OuterContext, InnerContext> = OuterContext & InnerContext;
 
-export type JsonLDDocument<PropertyTypes, OuterContext, Self> = Self extends {
-  "@context": infer Context;
-  [k: string]: any;
+type NodeObject<PropertyTypes, OuterContext, Self> = Self extends {
+  "@context": infer LocalContext;
 }
-  ? Self & _JsonLDDocument<PropertyTypes, NextContext<OuterContext, Context>>
-  : _JsonLDDocument<PropertyTypes, {}>;
+  ? Self &
+      _NodeObject<PropertyTypes, NextContext<OuterContext, LocalContext>, Self>
+  : Self & _NodeObject<PropertyTypes, NextContext<OuterContext, {}>, Self>;
 
-// type A = { [K in string as Exclude<K, "@context">]: string | number };
-type A = { [K in string]: K extends "@context" ? {} : string | number };
-const a: A = { "@context": true };
+export type JsonLDDocument<PropertyTypes, OuterContext, Self> = NodeObject<
+  PropertyTypes,
+  OuterContext,
+  Self
+>;
