@@ -12,8 +12,8 @@ interface PropertyTypes {
 }
 
 const createAcceptor =
-  <PropertyTypes>() =>
-  <Self>(d: JsonLDDocument<PropertyTypes, Self>) => {};
+  <PropertyTypes, OuterContext = {}>() =>
+  <Self>(d: JsonLDDocument<PropertyTypes, OuterContext, Self>) => {};
 
 // A function to take documents (and thus do some type inference)
 const acceptDocument = createAcceptor<PropertyTypes>();
@@ -62,4 +62,21 @@ acceptDocument({
   } as const,
   // @ts-expect-error
   alsoANumber: "a",
+});
+
+acceptDocument({
+  "@context": {
+    aNumber: "http://www.example.com/aNumber",
+  } as const,
+  // No error because it's not mapped to anything here.
+  alsoANumber: "a",
+  aNumber: 1,
+  // somethingElse: {
+  //   "@context": {
+  //     alsoANumber: "http://www.example.com/aNumber",
+  //   } as const,
+  //   // Error because here it's something that needs to be a number
+  //   // @ts-expect-error
+  //   alsoANumber: "a",
+  // },
 });
