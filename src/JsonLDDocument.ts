@@ -9,48 +9,46 @@ type Iri<
 export type NextContext<OuterContext, InnerContext> = OuterContext &
   InnerContext;
 
-export type NodeObject<PropertyTypes, OuterContext, Self> = _NodeObject<
-  PropertyTypes,
+// prettier-ignore
+export type NodeObject<PropertyTypes, OuterContext, Self> =
+  // Calculate the active context
   NextContext<
     OuterContext,
     "@context" extends keyof Self ? Self["@context"] : {}
-  >,
-  Self
->;
+  > extends infer ActiveContext ?
+    // NodeObjects may have...
+    // The built-in keywords:
+    { "@context"?: unknown } &
+    // Any terms defined in the active context:
+    {
+      // For each key K in the active context...
+      [K in keyof ActiveContext]?:
+        // If K is an alias for a property with a known type, use that type.
+        ActiveContext[K] extends keyof PropertyTypes
+          ? PropertyTypes[ActiveContext[K]]
 
-// prettier-ignore
-type _NodeObject<PropertyTypes, ActiveContext, Self> = 
-  // NodeObjects may have...
-  // The built-in keywords:
-  { "@context"?: unknown } &
-  // Any terms defined in the active context:
-  {
-    // For each key K in the active context...
-    [K in keyof ActiveContext]?:
-      // If K is an alias for a property with a known type, use that type.
-      ActiveContext[K] extends keyof PropertyTypes
-        ? PropertyTypes[ActiveContext[K]]
+        // Else, if K is in the object, it's a NodeObject
+        // (TODO: That's woefully incomplete)
+        : K extends keyof Self
+          ? NodeObject<PropertyTypes, ActiveContext, Self[K]>
 
-      // Else, if K is in the object, it's a NodeObject
-      // (TODO: That's woefully incomplete)
-      : K extends keyof Self
-        ? NodeObject<PropertyTypes, ActiveContext, Self[K]>
-
-      // Lastly, if it's not in the object, it's not in the object.
-      // TODO: This may prevent autocompleting to add new properties.
-      : never;
-  } &
-  // Any typed properties (which should be Iris):
-  { [K in keyof PropertyTypes]?: PropertyTypes[K] } &
-  // Any other Iris (typed as unknown):
-  { [K in (keyof Self) & Iri]?: unknown } &
-  // And nothing else:
-  {
-    [K in Exclude<
-      keyof Self,
-      keyof ActiveContext | keyof PropertyTypes | Iri | "@context"
-    >]?: never;
-  };
+        // Lastly, if it's not in the object, it's not in the object.
+        // TODO: This may prevent autocompleting to add new properties.
+        : never;
+    } &
+    // Any typed properties (which should be Iris):
+    { [K in keyof PropertyTypes]?: PropertyTypes[K] } &
+    // Any other Iris (typed as unknown):
+    { [K in (keyof Self) & Iri]?: unknown } &
+    // And nothing else:
+    {
+      [K in Exclude<
+        keyof Self,
+        keyof ActiveContext | keyof PropertyTypes | Iri | "@context"
+      >]?: never;
+    }
+    // /infer ActiveContext
+    : never;
 
 export type JsonLDDocument<PropertyTypes, OuterContext, Self> = {
   // This trick ensures Self is inferred to be the entire object this type is
