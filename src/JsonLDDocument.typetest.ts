@@ -12,7 +12,10 @@ interface PropertyTypes {
 
 const createAcceptor =
   <PropertyTypes, OuterContext = {}>() =>
-  <Self>(d: JsonLDDocument<PropertyTypes, OuterContext, Self>) => {};
+  <Self>(
+    d: JsonLDDocument<PropertyTypes, OuterContext, Self>
+  ): { Actual: Self; Expected: { [K in keyof typeof d]: (typeof d)[K] } } =>
+    null as any;
 
 // A function to take documents (and thus do some type inference)
 const acceptDocument = createAcceptor<PropertyTypes>();
@@ -26,10 +29,14 @@ acceptDocument({
   "http://www.example.com/unknown": 2,
 });
 
-// It should accept unknown properties
+// It should accept unknown Iri properties
 acceptDocument({ "http://www.example.com/unknown": 1 });
 acceptDocument({ "@context": {}, "http://www.example.com/unknown": 1 });
+
+// It should not accept unknown non-Iri properties
+// @ts-expect-error
 acceptDocument({ unknown: 1 });
+// @ts-expect-error
 acceptDocument({ "@context": {}, unknown: 1 });
 
 // It should accept known Iri properties, and type them
@@ -66,8 +73,8 @@ acceptDocument({
   } as const,
   // @ts-expect-error
   aNumber: "a",
-  // No error because it's not mapped to anything here.
-  alsoANumber: "a",
+  // @ts-expect-error
+  alsoANumber: 1,
 
   somethingElse: {
     "@context": {
