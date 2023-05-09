@@ -33,7 +33,6 @@ export type NodeObject<PropertyTypes, OuterContext, Self> =
           ? NodeObject<PropertyTypes, ActiveContext, Self[K]>
 
         // Lastly, if it's not in the object, it's not in the object.
-        // TODO: This may prevent autocompleting to add new properties.
         : never;
     } &
     // Any IRI keys already in the object, with a type if known:
