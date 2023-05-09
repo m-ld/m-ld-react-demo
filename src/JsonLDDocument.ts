@@ -36,10 +36,11 @@ export type NodeObject<PropertyTypes, OuterContext, Self> =
         // TODO: This may prevent autocompleting to add new properties.
         : never;
     } &
-    // Any typed properties (which should be Iris):
-    { [K in keyof PropertyTypes]?: PropertyTypes[K] } &
-    // Any other Iris (typed as unknown):
-    { [K in (keyof Self) & Iri]?: unknown } &
+    // Any IRI keys already in the object, with a type if known:
+    {
+      [K in (keyof Self) & Iri]?:
+        K extends keyof PropertyTypes ? PropertyTypes[K] : unknown
+    } &
     // And nothing else:
     {
       [K in Exclude<
