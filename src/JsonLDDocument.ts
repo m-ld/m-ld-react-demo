@@ -1,4 +1,8 @@
-type NoInfer<T> = [T][T extends any ? 0 : never];
+/**
+ * Hints TS to infer `Self` as the object being typed, but actually resolves to
+ * `T`. (Generally, `T` should be defined in terms of `Self` to be useful.)
+ */
+export type InferringSelf<Self, T> = Self extends unknown ? T : Self;
 
 type Iri<
   Prefix extends string = string,
@@ -51,8 +55,5 @@ export type NodeObject<PropertyTypes, OuterContext, Self> =
     : never;
 
 export type JsonLDDocument<PropertyTypes, OuterContext, Self> = {
-  // This trick ensures Self is inferred to be the entire object this type is
-  // applied to, while the resulting type leaves the *values* of those keys as
-  // `unknown`.
-  [K in keyof Self]: K extends never ? Self[K] : unknown;
-} & NoInfer<NodeObject<PropertyTypes, OuterContext, Self>>;
+  [K in keyof Self]?: unknown;
+} & NodeObject<PropertyTypes, OuterContext, Self>;

@@ -42,7 +42,7 @@ true satisfies Equal<
 >;
 true satisfies Equal<AQueryObjectNode["anArrayOfUnknown"], A<Scalar | AQuery>>;
 
-declare function doQuery<Q extends AQuery>(
+declare function doQuery<const Q extends AQuery>(
   query: Q
 ): QueryResult<Q, PropertyTypes>;
 
@@ -94,7 +94,7 @@ const result = doQuery({
     ],
     "@count": "?",
   },
-} as const);
+});
 
 type Result = typeof result;
 

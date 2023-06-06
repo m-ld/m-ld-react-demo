@@ -1,4 +1,4 @@
-import { JsonLDDocument } from "./JsonLDDocument";
+import { InferringSelf, JsonLDDocument } from "./JsonLDDocument";
 
 interface PropertyTypes {
   "http://www.example.com/aNumber": number;
@@ -12,8 +12,8 @@ interface PropertyTypes {
 
 const createAcceptor =
   <PropertyTypes, OuterContext = {}>() =>
-  <Self>(
-    d: JsonLDDocument<PropertyTypes, OuterContext, Self>
+  <const Self>(
+    d: InferringSelf<Self, JsonLDDocument<PropertyTypes, OuterContext, Self>>
   ): { Actual: Self; Expected: { [K in keyof typeof d]: (typeof d)[K] } } =>
     null as any;
 
@@ -23,7 +23,7 @@ const acceptDocument = createAcceptor<PropertyTypes>();
 acceptDocument({
   "@context": {
     aNumber: "http://www.example.com/aNumber",
-  } as const,
+  },
   aNumber: 1,
   "http://www.example.com/aNumber": 2,
   "http://www.example.com/unknown": 2,
@@ -52,7 +52,7 @@ acceptDocument({
   "@context": {
     aNumber: "http://www.example.com/aNumber",
     alsoANumber: "http://www.example.com/aNumber",
-  } as const,
+  },
   aNumber: 1,
   alsoANumber: 1,
 });
@@ -61,7 +61,7 @@ acceptDocument({
   "@context": {
     aNumber: "http://www.example.com/aNumber",
     alsoANumber: "http://www.example.com/aNumber",
-  } as const,
+  },
   // @ts-expect-error
   alsoANumber: "a",
 });
@@ -70,7 +70,7 @@ acceptDocument({
   "@context": {
     aNumber: "http://www.example.com/aNumber",
     somethingElse: "http://www.example.com/somethingElse",
-  } as const,
+  },
   // @ts-expect-error
   aNumber: "a",
   // @ts-expect-error
@@ -79,7 +79,7 @@ acceptDocument({
   somethingElse: {
     "@context": {
       alsoANumber: "http://www.example.com/aNumber",
-    } as const,
+    },
     // aNumber is still mapped
     // @ts-expect-error
     aNumber: "a",

@@ -713,7 +713,7 @@ much more interesting:
 jsonld({
   "@context": {
     height: "http://swapi.dev/documentation#height",
-  } as const,
+  },
   // ✅ This has no problem:
   height: 172,
 });
@@ -721,7 +721,7 @@ jsonld({
 jsonld({
   "@context": {
     height: "http://swapi.dev/documentation#height",
-  } as const,
+  },
   // ❌ But this is an error:
   height: "Luke Skywalker",
 });
@@ -729,13 +729,6 @@ jsonld({
 
 That is, the JSON-LD context now allows TypeScript to correctly type _term_
 keys, key names defined in the context, by mapping them to their IRIs.
-
-(Note that the `@context` must currently be declared `as const` to prevent
-TypeScript from throwing away necessary information. TypeScript 5.0 offers [a
-feature which should make this
-unnecessary](https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#const-type-parameters),
-but due to a bug, that feature [doesn't work yet with the complex types we
-need](https://github.com/microsoft/TypeScript/issues/54537).)
 
 This mapping not only provides type _checking_; it also enables _completions_ in
 the editor, greatly improving ergonomics. For instance, suppose an editor
@@ -748,7 +741,7 @@ jsonld({
     name: "http://swapi.dev/documentation#name",
     /** A person's height. */
     height: "http://swapi.dev/documentation#height",
-  } as const,
+  },
   // <- Cursor here
 });
 ```
@@ -769,7 +762,7 @@ jsonld({
   "@context": {
     name: "http://swapi.dev/documentation#name",
     parent: "https://schema.org/parent",
-  } as const,
+  },
 
   name: "Luke Skywalker",
   // ❌ This is an error, because `height` isn't in context here.
@@ -780,7 +773,7 @@ jsonld({
     "@context": {
       // The term `height` is only defined under this node.
       height: "http://swapi.dev/documentation#height",
-    } as const,
+    },
     // ✅ This isn't an error, because `name` is still in context here.
     name: "Anakin Skywalker",
     // ✅ This isn't an error, because `height` is now in context.
@@ -819,7 +812,7 @@ const data = useQuery({
       manufacturer: "?",
     },
   ],
-} as const);
+});
 
 return (
   <div>
