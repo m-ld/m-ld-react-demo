@@ -445,9 +445,9 @@ const Skywalkers = () => {
 In React, the `useQuery` hook is little more than a wrapper around
 `observeQuery`. It simply returns each result emitted from the observable,
 causing the component to re-render with new data. If we'd prefer the list items
-to be their own component, we have a few choices. First, we can declare `Person`
-to take `name` and `hair_color`, which ensures that `Skywalkers` fetches those
-values and passes them along:
+to be their own component, we have two choices. In one approach∑∑, we can
+declare `Person` to take `name` and `hair_color`, which ensures that
+`Skywalkers` fetches those values and passes them along:
 
 ```tsx
 const Person = ({
@@ -496,52 +496,8 @@ const Skywalkers = () => {
 };
 ```
 
-<!--
-
-TK: This is funky, because the parent should own filtering while the child owns projection.
-
-Second, we can have `Person` expose the query that it needs and have the parent
-component roll that up:
-
-```tsx
-const PERSON_QUERY = {
-  "@id": "?",
-  "@type": "Person",
-  hair_color: "?",
-  name: { "@value": "?", "@strends": " Skywalker" },
-};
-
-const Person = ({ person }: { person: QueryResult<typeof PERSON_QUERY> }) => (
-  <li>
-    <a href={person["@id"]}>{person.name["@value"]}</a> has {person.hair_color}{" "}
-    hair.
-  </li>
-);
-
-Person.query = PERSON_QUERY;
-
-///
-
-const Skywalkers = () => {
-  const skywalkers = useQuery({
-    "@context": { "@vocab": "http://swapi.dev/documentation#" },
-    "@graph": [
-      // We'll get whatever `Person` says it wants.
-      Person.query,
-    ],
-  });
-
-  return (
-    <ul>
-      {skywalkers.map((person) => (
-        <Person key={person["@id"]} person={person} />
-      ))}
-    </ul>
-  );
-};
-``` -->
-
-Lastly, the child components can make and subscribe to their own queries
+This makes the `Person` component purely prop-driven, with no smarts of its own.
+Alternatively, the child components can make and subscribe to their own queries
 entirely:
 
 ```tsx
@@ -587,10 +543,11 @@ const Skywalkers = () => {
 };
 ```
 
-Notably, in this version, `Skywalkers` is not observing as many facts. When
-Luke's hair turns ash-brown now, `Skywalkers` will not re-render, but Luke's
-`Person` component will. But when Anakin changes his name to "Darth Vader",
-`Skywalkers` _will_ re-render, and drop one of the elements from the list it displays.
+Now the `Person` component is smarter, and depends on the query engine to
+function. However, in this version, `Skywalkers` is not observing as many facts.
+When Luke's hair turns ash-brown now, `Skywalkers` will not re-render, but
+Luke's `Person` component will. But when Anakin changes his name to "Darth
+Vader", `Skywalkers` _will_ re-render, and drop him from the list it displays.
 
 ### Writing Data
 
