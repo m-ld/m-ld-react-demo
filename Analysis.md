@@ -312,10 +312,6 @@ give us:
 }
 ```
 
-<!-- ##### Aggregates
-
-Now we'd like to know the average height of all the Skywalkers: -->
-
 #### Reactive Updates
 
 With pure RxJS observables:
@@ -665,8 +661,6 @@ useful types, in two ways:
 
 #### Useful types for JSON-LD documents
 
-TK: Something about existing typings for JSON-LD documents?
-
 JSON-LD itself is not aware of the expected types of properties. However,
 JSON-LD contexts do map properties from one name to another—thus, given the
 expected types of various properties by their IRIs, a sophisticated system of
@@ -683,7 +677,7 @@ this is just fine: if the document in question is a query, it will typically
 appear as an argument to `observeQuery()` or `useQuery()`. For other cases, we
 can provide an identity function which lets TypeScript apply the types properly
 without actually doing anything at runtime. The examples below use such a
-function, which we call here `jsonld()`. [TK: TS issue about relaxing this requirement.]
+function, which we call here `jsonld()`.
 
 First, we must define some property types. This can be in an interface which is
 explicitly provided to the query mechanism, or it can be a global interface
@@ -691,8 +685,6 @@ which can be extended through declaration merging from anywhere in the
 application. (This is reasonable in most cases, as the keys are IRIs, and
 typically will only need a single type definition within a given application.)
 The interface looks something like this:
-
-TK: Do we need all of these for these example?
 
 ```ts
 interface PropertyTypes {
@@ -738,11 +730,12 @@ jsonld({
 That is, the JSON-LD context now allows TypeScript to correctly type _term_
 keys, key names defined in the context, by mapping them to their IRIs.
 
-Note that the `@context` must be declared `as const` to prevent TypeScript from
-throwing away necessary information. [TK: TS issue about `as const` by default.
-[Should
-work](https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#const-type-parameters),
-but there's a bug (?) when we map over `Self`.]
+(Note that the `@context` must currently be declared `as const` to prevent
+TypeScript from throwing away necessary information. TypeScript 5.0 offers [a
+feature which should make this
+unnecessary](https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#const-type-parameters),
+but due to a bug, that feature [doesn't work yet with the complex types we
+need](https://github.com/microsoft/TypeScript/issues/54537).)
 
 This mapping not only provides type _checking_; it also enables _completions_ in
 the editor, greatly improving ergonomics. For instance, suppose an editor
@@ -762,8 +755,11 @@ jsonld({
 
 Bringing up the editor's completion feature (`Ctrl-Space` by default in VS Code)
 will display the options `name` and `height` for completion—and even better,
-will display the docstrings given for each of them. [TK: Would be better to put
-the docstring in `PropertyTypes`, but that's not currently possible.]
+will display the docstrings given for each of them. (It would be preferable to
+display a docstring defined within `PropertyTypes`, but unfortunately [this is
+not currently possible in
+TypeScript](https://github.com/microsoft/TypeScript/issues/50715). If this issue
+is resolved, however, we will be able to add that ability.) possible.]
 
 JSON-LD contexts propagate to child nodes, and these types propagate in the same
 way. Thus:
