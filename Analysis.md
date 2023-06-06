@@ -1,11 +1,3 @@
-<!-- markdownlint-disable no-space-in-code -->
-
-TK:
-
-- Expressiveness: Can express all the things you'd want to, without too much fuss.
-- Readability: Can be understood by readers.
-- Error-resilience (?): Unlikely to make mistakes
-
 # Analysis
 
 Goal: to encourage and support the development of Healthy Web Apps, defined by:
@@ -63,10 +55,48 @@ developer for convenience, but it may also be operated by end user themselves if
 desired, preserving user control. Just as end users can bring their own pods to
 a Solid app, they can also bring their own Gateways to these collaborative apps.
 
-## TK name
+## "xQL": A query language
 
 To make such an application suitably easy to build well, we believe developers
-will need the following capabilities:
+need a language for interacting with data which is:
+
+- **Expressive**—able express all the data access and mutation an application
+  needs, without too much fuss;
+- **Readable**—with meaning clearly understood to those reading; and
+- **Resilient**—unlikely to lead to mistakes, both when writing code the first
+  time and when modifying code later.
+
+In this section, we outline a query language which fulfils these goals. It
+supports both read queries and writes. For the purposes of this document, we
+name this query language "xQL", where "x" is meant to be a placeholder. It is
+expected that this language will merge with [json-rql](https://json-rql.org/)
+eventually, but for now it will be considered as its own specification with its
+own (temporary) name.
+
+We take inspiration from several existing tools:
+
+- Like [GraphQL](https://graphql.org/), xQL has a recursive, composable query
+  structure (whereas SPARQL is often hard to compose well).
+
+- Like GraphQL, xQL's results match the structure of the query.
+
+- Like [Datomic Pull](https://docs.datomic.com/pro/query/pull.html), xQL is
+  built as data structures, and natively integrates with existing JavaScript
+  tools (whereas GraphQL has a novel string representation, requiring custom
+  tools).
+- Like [SPARQL](https://www.w3.org/TR/sparql11-query/), xQL queries match over
+  the entire set of data, so they can "begin" anywhere (whereas GraphQL schemas
+  are always rooted at a common `Query` node).
+
+- Like [JSON-LD Frames](https://www.w3.org/TR/json-ld11-framing/), xQL queries
+  are themselves JSON-LD, and are patterns to match in the data, resulting in
+  similarly-shaped data. (But whereas JSON-LD Frames, generally return all of
+  the data in a new shape, xQL queries are designed to limit the data to exactly
+  what is asked for.)
+
+The language is described below with varying degrees of precision. Bear in mind,
+however, that this is a draft for analysis purposes and subject to change during
+implementation. We have focused on the areas we believe are most fundamental.
 
 ### Reactive Observable Queries
 
@@ -83,74 +113,34 @@ presents an [RxJS Observable](https://rxjs.dev/guide/observable) of successive
 query results. This interface is convenient to use in any web framework or
 library, including React, Angular, and the Web Components ecosystem.
 
-For the purposes of this document, we name this query language "xQL", where "x"
-is meant to be a placeholder. It is expected that this language will merge with
-[json-rql](https://json-rql.org/) eventually, but for now it will be considered
-as its own specification with its own (temporary) name.
+#### Queries
 
-The language is specified below with some precision. Bear in mind, however, that
-this is a draft for analysis purposes and subject to change during
-implementation.
+First, let's look at the form of xQL queries and the data they return. An xQL
+query takes the form of a kind of JSON-LD document, much like JSON-LD Frames do.
+The _result_ of a query always has the same structure as the query itself: an
+object in the query corresponds to an object in the result with the same keys,
+and an array in the query corresponds to an array in the result.
 
-Goals:
+xQL defines certain keys with special meaning, beginning with `@`, just like
+JSON-LD itself does. When these keys appear in queries, they also appear in
+results, because the structures must match. Importantly, because these keywords
+are not defined by JSON-LD, these key-value pairs are ignored entirely by
+JSON-LD processors. This supports an important principle of xQL's design:
 
-- Readability
-- Composability
-- Type safety
+**The result of any xQL query is a valid JSON-LD document describing a subset of
+the original data.** That is, the results of two queries run against the same
+graph will never appear to "disagree". While in some query languages, the
+meaning of query results depends on an understanding of the query that found
+them ("The name is 'Luke Skywalker'"), xQL results carry their full context and
+can be understood in isolation ("The SWAPI-name of
+`https://swapi.dev/api/people/1/` is 'Luke Skywalker'"). Results can be
+transported, cached, and merged with other results and always remain a correct
+subset of the information in the original data source.
 
-Inspiration:
-
-- GraphQL
-- SPARQL
-- Datomic Pull
-- JSON-LD and JSON-LD Framing
-
-Things that are true:
-
-- An xQL query is a "JSON object" (that is, an object which can be validly
-  represented as JSON), and more specifically a valid JSON-LD document. However,
-  it is not itself terribly useful as a source of data. This is akin to JSON-LD
-  frames, which are valid JSON-LD documents, but are most useful used as frames,
-  not as sources of data.
-
-- Objects within an xQL query may contain several keys which begin with `@`
-  which are keywords not defined by JSON-LD but defined by xQL ("xQL keywords").
-  These keys and their values are ignored by JSON-LD processors.
-
-- An xQL query is applied to a JSON-LD-compatible data source, such as a JSON-LD
-  document or any RDF graph or dataset.
-
-- The _result_ of a query is always a valid JSON-LD document. When interpreted
-  as a JSON-LD document by a JSON-LD processor, the document describes a set of
-  facts (triples) which is a subset of the facts in the original, queried data
-  source.
-
-- The result of a query always has the same structure as the query itself. More
-  specifically:
-
-  - An object in the query corresponds to an object in the result with the same
-    keys.
-
-  - An array in the query corresponds to [TK]
-
-- TK more
-
-#### Notable differences from related languages
-
-GraphQL:
-
-- ✅ Recursive, composable query structure
-- ✅ Results which match the structure of the query
-- ❌ GraphQL has a novel string representation; xQL is a subset of JSON, and
-  generally represented as object literals rather than a string.
-- ❌ GraphQL schemas begin with a root `Query` node where are queries begin; xQL
-  queries match over the entire set of data.
-
-#### Examples
-
-For our examples, we'll use the data offered by [SWAPI](https://swapi.dev/), the
-Star Wars API. This API offers a rich set of data in a JSON format which is
-easily read as JSON-LD by attaching a context to each resource.
+Let's illustrate with some examples. We'll use the data offered by
+[SWAPI](https://swapi.dev/), the Star Wars API. This API offers a rich set of
+data in a JSON format which is easily read as JSON-LD by attaching a context to
+each resource.
 
 The context:
 
@@ -162,7 +152,6 @@ The context:
     "height": { "@type": "xsd:integer" },
     "mass": { "@type": "xsd:integer" },
     "vehicles": { "@type": "@id" }
-    // TK more here?
   }
 }
 ```
@@ -195,6 +184,15 @@ value for this key. We will get the result:
 }
 ```
 
+As JSON-LD, this describes exactly one fact, "Luke's hair is blond", written in Turtle as:
+
+```turtle
+<https://swapi.dev/api/people/1/> <http://swapi.dev/documentation#hair_color> "blond" .
+```
+
+This is a (very small) subgraph of the original graph: a single triple which was
+present in the original data.
+
 ##### Match by `name`: What color are Luke's eyes?
 
 Suppose we _don't_ know Luke's IRI yet. Then we might ask:
@@ -218,7 +216,19 @@ Then we expect to get the following:
 ```
 
 Notice that the result, once again, has the same shape as the query. The query
-serves as a template which the query engine "fills in".
+serves as a template which the query engine "fills in". Notice also that what
+this means in JSON-LD, "Something named 'Luke Skywalker' has blue eyes," is
+again a subgraph of the original data:
+
+```turtle
+[] <http://swapi.dev/documentation#name> "Luke Skywalker" ;
+   <http://swapi.dev/documentation#eye_color> "blue" .
+```
+
+(Techincally speaking, it's more proper to say that the original graph
+[_entails_](https://w3c.github.io/rdf-semantics/spec/#simpleentailment) this
+one, because of the blank node, but the idea is the same—it's a subset of the
+original information.)
 
 ##### Graph traversal: What vehicles has Luke piloted?
 
@@ -261,16 +271,18 @@ The result:
 
 Notice that `vehicles` was an array in the query, and remains an array in the
 result. By JSON-LD semantics, an array of a single value is equivalent to the
-single value, not in an array. However, in xQL, the result value will always be
-in an array exactly when it was in an array in the query, regardless of the
-cardinality. A property value not in an array in the query is implicitly limited
-to 1 result, which may choose an arbitrary value, so this is intended for cases
-where the query expects a single value to exist in the data.
+single value itself. However, in xQL, the result value will always appear in an
+array exactly when it was in an array in the query, regardless of the number of
+results. This makes the format of the result object easier to anticipate.
 
 ##### Filtering with operators
 
+<!-- markdownlint-disable no-space-in-code -->
+
 Suppose we want to find all of the Skywalkers—that is, all people whose name
 ends in ` Skywalker`:
+
+<!-- markdownlint-restore -->
 
 ```json
 {
@@ -285,9 +297,9 @@ ends in ` Skywalker`:
 }
 ```
 
-`@strends` here corresponds to [the SPARQL function
-`STRENDS`](https://www.w3.org/TR/sparql11-query/#func-strends). This query will
-give us:
+`@strends` here is our first xQL operator. It corresponds to [the SPARQL
+function `STRENDS`](https://www.w3.org/TR/sparql11-query/#func-strends). This
+query will give us:
 
 ```json
 {
@@ -311,6 +323,13 @@ give us:
   ]
 }
 ```
+
+Notice what this document means in JSON-LD: that there are three resources, all
+people, with these three names. The `@strends` key describes to the application
+(correct) information about the names, but doesn't represent any facts
+explicitly in the original data—correspondingly, JSON-LD isn't aware of the
+`@strends` key, and ignores it. Thus, the result (under JSON-LD) is still a
+subgraph of the original data.
 
 #### Reactive Updates
 
