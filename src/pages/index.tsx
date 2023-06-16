@@ -1,7 +1,8 @@
 import classNames from "classnames";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import { QueryResult } from "../QueryResult";
 import { PropertyTypes } from "./_app";
+import { uuid } from "@m-ld/m-ld";
 
 enum StatusFilter {
   All = "all",
@@ -9,8 +10,20 @@ enum StatusFilter {
   Completed = "completed",
 }
 
-const ENTER_KEY = 13;
-const ESCAPE_KEY = 27;
+const CONTEXT = {
+  "@vocab": "https://todomvc.com/vocab/",
+  icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+  items: {
+    "@container": "@list",
+  },
+  activeItems: "items",
+  completedItems: "items",
+  "icaltzd:Vtodo": {
+    "@context": {
+      "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
+    },
+  },
+};
 
 interface ITodo {
   id: string;
@@ -60,6 +73,14 @@ const TodoItem = ({ id, editing }: ITodoItemProps) => {
 
   const completed = data.status === "COMPLETED";
 
+  const toggleCompleted = () => {
+    write({
+      "@context": query["@context"],
+      "@id": id,
+      status: { "@update": completed ? "IN-PROCESS" : "COMPLETED" },
+    });
+  };
+
   return (
     <li
       className={classNames({
@@ -72,7 +93,7 @@ const TodoItem = ({ id, editing }: ITodoItemProps) => {
           className="toggle"
           type="checkbox"
           checked={completed}
-          // onChange={onToggle}
+          onChange={toggleCompleted}
         />
         <label>{data.summary}</label>
         <button
@@ -142,24 +163,51 @@ const TodoFooter = ({
   </footer>
 );
 
+const Header = () => {
+  const [newTodoSummary, setNewTodoSummary] = useState("");
+
+  const addTodo = () => {
+    const uid = uuid();
+
+    write({
+      "@context": CONTEXT,
+      "@id": "todoMVCList",
+      items: {
+        "@append": {
+          "@id": `urn:uuid:${uid}`,
+          "@type": "icaltzd:Vtodo",
+          status: "COMPLETED",
+          summary: "Taste JavaScript",
+          uid,
+        },
+      },
+    });
+  };
+
+  return (
+    <header className="header">
+      <h1>todos</h1>
+      <input
+        className="new-todo"
+        placeholder="What needs to be done?"
+        value={newTodoSummary}
+        onChange={(e) => setNewTodoSummary(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            addTodo();
+          }
+        }}
+        autoFocus={true}
+      />
+    </header>
+  );
+};
+
 export default function Home() {
   const [nowShowing, setNowShowing] = useState(StatusFilter.All);
 
   const query = {
-    "@context": {
-      "@vocab": "https://todomvc.com/vocab/",
-      icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
-      items: {
-        "@container": "@list",
-      },
-      activeItems: "items",
-      completedItems: "items",
-      "icaltzd:Vtodo": {
-        "@context": {
-          "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
-        },
-      },
-    },
+    "@context": CONTEXT,
     "@id": "todoMVCList",
     items: [
       {
@@ -225,24 +273,24 @@ export default function Home() {
   const completedCount = data.completedItems["@count"];
   const shownTodos = data.items;
 
+  const toggleAll = (e: ChangeEvent<HTMLInputElement>) => {
+    write({
+      "@context": query["@context"],
+      "@id": shownTodos.map((todo) => todo["@id"]),
+      status: { "@update": e.target.checked ? "COMPLETED" : "IN-PROCESS" },
+    });
+  };
+
   return (
     <div>
-      <header className="header">
-        <h1>todos</h1>
-        <input
-          className="new-todo"
-          placeholder="What needs to be done?"
-          // onKeyDown={(e) => this.handleNewTodoKeyDown(e)}
-          autoFocus={true}
-        />
-      </header>
+      <Header />
       {!!data.items.length && (
         <section className="main">
           <input
             id="toggle-all"
             className="toggle-all"
             type="checkbox"
-            // onChange={(e) => this.toggleAll(e)}
+            onChange={toggleAll}
             checked={activeTodoCount === 0}
           />
           <label htmlFor="toggle-all">Mark all as complete</label>
@@ -259,7 +307,7 @@ export default function Home() {
           count={activeTodoCount}
           completedCount={completedCount}
           nowShowing={nowShowing}
-          // onClearCompleted={(e) => this.clearCompleted()}f
+          // onClearCompleted={(e) => this.clearCompleted()}
         />
       )}
     </div>
