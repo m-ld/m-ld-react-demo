@@ -11,6 +11,21 @@ import "todomvc-common/base.css";
 import "todomvc-app-css/index.css";
 import { MeldDebug } from "@/components/MeldDebug";
 
+// TODO: Write these in terms of the expanded IRIs, not the context-relative
+// terms that we happen to use consistently.
+export interface PropertyTypes {
+  // TodoList
+  // TODO: Type lists well
+  items: unknown;
+
+  // icaltzd:Vtodo
+  // Statuses for VTODOs specifically:
+  // https://www.rfc-editor.org/rfc/rfc5545#section-3.8.1.11
+  status: "NEEDS-ACTION" | "COMPLETED" | "IN-PROCESS" | "CANCELLED";
+  summary: string;
+  uid: string;
+}
+
 const initialDataPromise = compact(
   {
     "@context": {
@@ -29,12 +44,14 @@ const initialDataPromise = compact(
     "@type": "TodoList",
     items: [
       {
+        "@id": "urn:uuid:db2ccffd-1b37-4ca4-81b9-d724dfb70ba8",
         "@type": "icaltzd:Vtodo",
         status: "COMPLETED",
         summary: "Taste JavaScript",
         uid: "DB2CCFFD-1B37-4CA4-81B9-D724DFB70BA8",
       },
       {
+        "@id": "urn:uuid:401bfc3d-7c9b-46cc-a842-6d7c91bfd7ec",
         "@type": "icaltzd:Vtodo",
         status: "IN-PROCESS",
         summary: "Buy Unicorn",

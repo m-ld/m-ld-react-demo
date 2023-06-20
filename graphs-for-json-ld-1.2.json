@@ -1,0 +1,140 @@
+[
+  {
+    "@context": "http://schema.org/",
+    "@graph": [
+      {
+        "@id": "ex:addressBook",
+        "@graph": [
+          {
+            "@id": "ex:jane",
+            "email": "jane@uni.edu"
+          }
+        ]
+      },
+      {
+        "@id": "ex:campusDirectory",
+        "@graph": [
+          {
+            "@id": "ex:jane",
+            "telephone": "(425) 123-4567"
+          }
+        ]
+      },
+      {
+        "@graph": [
+          {
+            "@id": "ex:jane",
+            "type": "Person",
+            "jobTitle": "Professor",
+            "name": "Jane Doe",
+            "url": "http://www.janedoe.com"
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    "@context": "http://schema.org/",
+
+    "@id": "ex:jane",
+    "type": "Person",
+    "jobTitle": "Professor",
+    "name": "Jane Doe",
+    "url": "http://www.janedoe.com",
+
+    "telephone": {
+      "@graph": "ex:campusDirectory",
+      "@value": "(425) 123-4567"
+    },
+
+    "email": {
+      "@graph": "ex:addressBook",
+      "@value": "jane@uni.edu"
+    }
+  },
+
+  {
+    "@context": [
+      "http://schema.org/",
+      { "teachesCourseInstances": { "@reverse": "instructor" } }
+    ],
+
+    "@id": "ex:jane",
+    "type": "Person",
+    "name": "Jane Doe",
+
+    "spouse": {
+      "@graph": "ex:campusDirectory",
+      "@id": "ex:john",
+      "type": "Person",
+      "jobTitle": "Professor",
+      "name": "John Doe"
+    },
+
+    "teachesCourseInstances": {
+      "@graph": "ex:courseCatalog",
+      "@set": [
+        {
+          "type": "CourseInstance",
+          "name": "JSON-LD for You and Me",
+          "about": "https://www.w3.org/TR/json-ld11/"
+        },
+        {
+          "type": "CourseInstance",
+          "name": "Schema.org: A Semantic Smorgasbord",
+          "about": "http://schema.org/"
+        }
+      ]
+    }
+  },
+
+  {
+    "@context": [
+      "http://schema.org/",
+      {
+        "Person": {
+          "telephone": { "@graph": "ex:campusDirectory" },
+          "email": { "@graph": "ex:addressBook" },
+          "spouse": { "@graph": "ex:campusDirectory" },
+          "teachesCourseInstances": {
+            "@reverse": "instructor",
+            "@graph": "ex:courseCatalog"
+          }
+        }
+      }
+    ],
+
+    "@id": "ex:jane",
+    "type": "Person",
+    "jobTitle": "Professor",
+    "name": "Jane Doe",
+    "url": "http://www.janedoe.com",
+
+    "telephone": "(425) 123-4567",
+    "email": "jane@uni.edu",
+
+    "spouse": {
+      "@id": "ex:john",
+      "type": "Person",
+      "jobTitle": "Professor",
+      "name": "John Doe",
+
+      "telephone": "(425) 123-9876",
+      "email": "john@uni.edu"
+    },
+
+    "teachesCourseInstances": [
+      {
+        "type": "CourseInstance",
+        "name": "JSON-LD for You and Me",
+        "about": "https://www.w3.org/TR/json-ld11/"
+      },
+      {
+        "type": "CourseInstance",
+        "name": "Schema.org: A Semantic Smorgasbord",
+        "about": "http://schema.org/"
+      }
+    ]
+  }
+]
