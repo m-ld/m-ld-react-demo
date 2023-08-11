@@ -22,11 +22,11 @@ interface ITodoItemProps {
   key: string;
   todo: ITodo;
   editing?: boolean;
-  onSave: (val: any) => void;
-  onDestroy: () => void;
-  onEdit: () => void;
-  onCancel: (event: any) => void;
-  onToggle: () => void;
+  // onSave: (val: any) => void;
+  // onDestroy: () => void;
+  // onEdit: () => void;
+  // onCancel: (event: any) => void;
+  // onToggle: () => void;
 }
 
 const TodoItem = (props: ITodoItemProps) => (
@@ -41,14 +41,14 @@ const TodoItem = (props: ITodoItemProps) => (
         className="toggle"
         type="checkbox"
         checked={props.todo.completed}
-        onChange={props.onToggle}
+        // onChange={props.onToggle}
       />
       <label
       // onDoubleClick={(e) => this.handleEdit()}
       >
         {props.todo.title}
       </label>
-      <button className="destroy" onClick={props.onDestroy} />
+      {/* <button className="destroy" onClick={props.onDestroy} /> */}
     </div>
     <input
       className="edit"
@@ -62,14 +62,14 @@ const TodoItem = (props: ITodoItemProps) => (
 
 interface ITodoFooterProps {
   completedCount: number;
-  onClearCompleted: any;
+  // onClearCompleted: any;
   nowShowing: string;
   count: number;
 }
 
 const TodoFooter = ({
   completedCount,
-  onClearCompleted,
+  // onClearCompleted,
   nowShowing,
   count,
 }: ITodoFooterProps) => (
@@ -104,7 +104,7 @@ const TodoFooter = ({
       </li>
     </ul>
     {!!completedCount && (
-      <button className="clear-completed" onClick={onClearCompleted}>
+      <button className="clear-completed" /* onClick={onClearCompleted} */>
         Clear completed
       </button>
     )}
