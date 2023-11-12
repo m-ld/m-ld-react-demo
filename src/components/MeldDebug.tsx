@@ -1,3 +1,4 @@
+import JSON5 from "json5";
 import { useEffect, useState } from "react";
 import { Quad, Stream } from "@rdfjs/types";
 import { MeldReadState } from "@m-ld/m-ld";
@@ -34,7 +35,7 @@ const INITIAL_QUERY = `[
 
 const parseQuery = (queryString: string): JsonValue | undefined => {
   try {
-    return JSON.parse(queryString);
+    return JSON5.parse(queryString);
   } catch (e) {
     if (e instanceof SyntaxError) {
       return undefined;
