@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Quad, Stream } from "@rdfjs/types";
 import { MeldReadState } from "@m-ld/m-ld";
 import N3 from "n3";
-import { useMeld } from "../hooks/useMeld";
+import { useMeld } from "@/hooks/useMeld";
 import { prettyPrintJson } from "pretty-print-json";
 
 import { query as runQuery } from "xql";

@@ -8,6 +8,9 @@ dependencies:
   '@m-ld/m-ld':
     specifier: 0.10.0
     version: 0.10.0
+  '@types/lodash-es':
+    specifier: ^4.17.11
+    version: 4.17.11
   '@types/node':
     specifier: 18.14.1
     version: 18.14.1
@@ -32,6 +35,9 @@ dependencies:
   jsonld:
     specifier: 8.1.1
     version: 8.1.1
+  lodash-es:
+    specifier: ^4.17.21
+    version: 4.17.21
   memory-level:
     specifier: ^1.0.0
     version: 1.0.0
@@ -62,6 +68,9 @@ dependencies:
   xql:
     specifier: link:../xql
     version: link:../xql
+  zod:
+    specifier: ^3.22.4
+    version: 3.22.4
 
 devDependencies:
   '@rdfjs/types':
@@ -1097,6 +1106,16 @@ packages:
 
   /@types/jsonld@1.5.8:
     resolution: {integrity: sha512-4l5t/jDnJpqZ+i7CLTTgPcT5BYXnAnwJupb07aAokPufCV0SjDHcwctUkSTuhIuSU9yHok+WOOngIGCtpL96gw==}
+
+  /@types/lodash-es@4.17.11:
+    resolution: {integrity: sha512-eCw8FYAWHt2DDl77s+AMLLzPn310LKohruumpucZI4oOFJkIgnlaJcy23OKMJxx4r9PeTF13Gv6w+jqjWQaYUg==}
+    dependencies:
+      '@types/lodash': 4.14.201
+    dev: false
+
+  /@types/lodash@4.14.201:
+    resolution: {integrity: sha512-y9euML0cim1JrykNxADLfaG0FgD1g/yTHwUs/Jg9ZIU7WKj2/4IW9Lbb1WZbvck78W/lfGXFfe+u2EGfIJXdLQ==}
+    dev: false
 
   /@types/lru-cache@5.1.1:
     resolution: {integrity: sha512-ssE3Vlrys7sdIzs5LOxCzTVMsU7i9oa/IaW92wF32JFb3CVczqOkru2xspuKczHEbG3nvmPY7IFqVmGGHdNbYw==}
@@ -3453,6 +3472,10 @@ packages:
       p-locate: 5.0.0
     dev: false
 
+  /lodash-es@4.17.21:
+    resolution: {integrity: sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw==}
+    dev: false
+
   /lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
     dev: false
@@ -4683,3 +4706,7 @@ packages:
   /yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  /zod@3.22.4:
+    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false

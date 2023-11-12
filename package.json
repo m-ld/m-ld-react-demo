@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@m-ld/m-ld": "0.10.0",
+    "@types/lodash-es": "^4.17.11",
     "@types/node": "18.14.1",
     "@types/react": "18.0.28",
     "@types/react-dom": "18.0.11",
@@ -19,6 +20,7 @@
     "eslint-config-next": "13.2.1",
     "json5": "^2.2.3",
     "jsonld": "8.1.1",
+    "lodash-es": "^4.17.21",
     "memory-level": "^1.0.0",
     "n3": "^1.16.3",
     "next": "13.2.1",
@@ -28,7 +30,8 @@
     "todomvc-app-css": "2.4.2",
     "todomvc-common": "1.0.5",
     "typescript": "4.9.5",
-    "xql": "link:../xql"
+    "xql": "link:../xql",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@rdfjs/types": "^1.1.0",
