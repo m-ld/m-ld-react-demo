@@ -10,7 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@m-ld/m-ld": "^0.9.1",
+    "@m-ld/m-ld": "0.10.0",
     "@types/node": "18.14.1",
     "@types/react": "18.0.28",
     "@types/react-dom": "18.0.11",
