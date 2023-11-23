@@ -1,5 +1,12 @@
+import { useMeld } from "@/hooks/useMeld";
 import { useSubject } from "@/hooks/useSubject";
+import { MeldClone } from "@m-ld/m-ld";
 import classNames from "classnames";
+import { useEffect, useState } from "react";
+import { JsonValue } from "type-fest";
+import { query as runQuery } from "xql";
+import { z } from "zod";
+import { sortBy } from "lodash-es";
 
 const ALL_TODOS = "all";
 const ACTIVE_TODOS = "active";
@@ -13,20 +20,15 @@ interface ITodo {
   completed: boolean;
 }
 
-const TODOS: ITodo[] = [
-  { id: "a", title: "Taste JavaScript", completed: true },
-  { id: "b", title: "Buy Unicorn", completed: false },
-];
-
 interface ITodoItemProps {
   key: string;
   todo: ITodo;
   editing?: boolean;
-  onSave: (val: any) => void;
-  onDestroy: () => void;
-  onEdit: () => void;
-  onCancel: (event: any) => void;
-  onToggle: () => void;
+  // onSave: (val: any) => void;
+  // onDestroy: () => void;
+  // onEdit: () => void;
+  // onCancel: (event: any) => void;
+  // onToggle: () => void;
 }
 
 const TodoItem = (props: ITodoItemProps) => (
@@ -40,15 +42,15 @@ const TodoItem = (props: ITodoItemProps) => (
       <input
         className="toggle"
         type="checkbox"
-        checked={props.todo.completed}
-        onChange={props.onToggle}
+        // checked={props.todo.completed}
+        // onChange={props.onToggle}
       />
       <label
       // onDoubleClick={(e) => this.handleEdit()}
       >
         {props.todo.title}
       </label>
-      <button className="destroy" onClick={props.onDestroy} />
+      {/* <button className="destroy" onClick={props.onDestroy} /> */}
     </div>
     <input
       className="edit"
@@ -62,14 +64,14 @@ const TodoItem = (props: ITodoItemProps) => (
 
 interface ITodoFooterProps {
   completedCount: number;
-  onClearCompleted: any;
+  // onClearCompleted: any;
   nowShowing: string;
   count: number;
 }
 
 const TodoFooter = ({
   completedCount,
-  onClearCompleted,
+  // onClearCompleted,
   nowShowing,
   count,
 }: ITodoFooterProps) => (
@@ -104,17 +106,54 @@ const TodoFooter = ({
       </li>
     </ul>
     {!!completedCount && (
-      <button className="clear-completed" onClick={onClearCompleted}>
+      <button className="clear-completed" /* onClick={onClearCompleted} */>
         Clear completed
       </button>
     )}
   </footer>
 );
 
-export default function Home() {
-  const nowShowing: string = ALL_TODOS;
+const query = [
+  {
+    "@context": {
+      icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+      todomvc: "https://todomvc.com/vocab/",
 
-  const todos = TODOS;
+      id: "icaltzd:uid",
+      title: "icaltzd:summary",
+      completed: "icaltzd:status",
+      order: "todomvc:order",
+    },
+    id: "?",
+    title: "?",
+    completed: "?",
+    order: "?",
+  },
+];
+
+const schema = z.array(
+  z.object({
+    id: z.string(),
+    title: z.string(),
+    completed: z.string().transform((status) => status === "COMPLETED"),
+    order: z.number(),
+  })
+);
+
+export default function Home() {
+  const meld = useMeld();
+  // TODO: Should support a loading state, rather than defaulting to `[]`.
+  const [todos, setTodos] = useState<ITodo[]>([]);
+
+  useEffect(() => {
+    if (meld) {
+      runQuery(meld, query).then((data) =>
+        setTodos(sortBy(schema.parse(data), (r) => r.order))
+      );
+    }
+  }, [meld]);
+
+  const nowShowing: string = ALL_TODOS;
 
   var activeTodoCount = todos.filter((todo) => todo.completed).length;
   var completedCount = todos.length - activeTodoCount;
@@ -148,7 +187,7 @@ export default function Home() {
             className="toggle-all"
             type="checkbox"
             // onChange={(e) => this.toggleAll(e)}
-            checked={activeTodoCount === 0}
+            // checked={activeTodoCount === 0}
           />
           <label htmlFor="toggle-all">Mark all as complete</label>
           <ul className="todo-list">

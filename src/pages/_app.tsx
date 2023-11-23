@@ -14,9 +14,9 @@ import { MeldDebug } from "@/components/MeldDebug";
 const initialDataPromise = compact(
   {
     "@context": {
-      "@vocab": "https://todomvc.com/vocab/",
+      todomvc: "https://todomvc.com/vocab/",
       icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
-      items: {
+      "todomvc:items": {
         "@container": "@list",
       },
       "icaltzd:Vtodo": {
@@ -26,19 +26,21 @@ const initialDataPromise = compact(
       },
     },
     "@id": "todoMVCList",
-    "@type": "TodoList",
-    items: [
+    "@type": "todomvc:TodoList",
+    "todomvc:items": [
       {
         "@type": "icaltzd:Vtodo",
         status: "COMPLETED",
         summary: "Taste JavaScript",
         uid: "DB2CCFFD-1B37-4CA4-81B9-D724DFB70BA8",
+        "todomvc:order": 0,
       },
       {
         "@type": "icaltzd:Vtodo",
         status: "IN-PROCESS",
         summary: "Buy Unicorn",
         uid: "401BFC3D-7C9B-46CC-A842-6D7C91BFD7EC",
+        "todomvc:order": 1,
       },
     ],
   },

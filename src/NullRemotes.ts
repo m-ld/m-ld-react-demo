@@ -5,7 +5,7 @@ import {
   OperationMessage,
 } from "@m-ld/m-ld/ext/engine";
 import { LiveValue } from "@m-ld/m-ld/ext/engine/api-support";
-import { NEVER, Observable, of } from "rxjs";
+import { NEVER, Observable, concat, of } from "rxjs";
 
 class NotImplementedError extends Error {
   constructor(methodName: string) {
@@ -16,11 +16,12 @@ class NotImplementedError extends Error {
 }
 
 const constantLiveValue = <T>(value: T): LiveValue<T> => {
-  const observable = of(value);
+  // Emit `value`, then never complete.
+  const observable = concat(of(value), NEVER);
   return Object.defineProperty(observable, "value", {
     value,
     writable: false,
-  }) as LiveValue<T>;
+  }) as unknown as LiveValue<T>;
 };
 
 export class NullRemotes implements MeldRemotes {
