@@ -7,9 +7,11 @@ import { z } from "zod";
 import { sortBy } from "lodash-es";
 import { compact } from "jsonld";
 
-const ALL_TODOS = "all";
-const ACTIVE_TODOS = "active";
-const COMPLETED_TODOS = "completed";
+enum Filter {
+  all,
+  active,
+  completed,
+}
 
 // https://www.kanzaki.com/docs/ical/status.html
 const VTodoStatusEnum = z.enum([
@@ -70,7 +72,8 @@ const TodoItem = (props: ITodoItemProps) => {
 interface ITodoFooterProps {
   completedCount: number;
   onClearCompleted: MouseEventHandler<HTMLButtonElement>;
-  nowShowing: string;
+  nowShowing: Filter;
+  setNowShowing: (newFilter: Filter) => void;
   count: number;
 }
 
@@ -78,6 +81,7 @@ const TodoFooter = ({
   completedCount,
   onClearCompleted,
   nowShowing,
+  setNowShowing,
   count,
 }: ITodoFooterProps) => (
   <footer className="footer">
@@ -87,24 +91,24 @@ const TodoFooter = ({
     <ul className="filters">
       <li>
         <a
-          href="#/"
-          className={classNames({ selected: nowShowing === ALL_TODOS })}
+          onClick={() => setNowShowing(Filter.all)}
+          className={classNames({ selected: nowShowing === Filter.all })}
         >
           All
         </a>
       </li>{" "}
       <li>
         <a
-          href="#/active"
-          className={classNames({ selected: nowShowing === ACTIVE_TODOS })}
+          onClick={() => setNowShowing(Filter.active)}
+          className={classNames({ selected: nowShowing === Filter.active })}
         >
           Active
         </a>
       </li>{" "}
       <li>
         <a
-          href="#/completed"
-          className={classNames({ selected: nowShowing === COMPLETED_TODOS })}
+          onClick={() => setNowShowing(Filter.completed)}
+          className={classNames({ selected: nowShowing === Filter.completed })}
         >
           Completed
         </a>
@@ -145,6 +149,7 @@ const QueryResultSchema = z.object({
 });
 
 export default function Home() {
+  const [nowShowing, setNowShowing] = useState(Filter.all);
   const meld = useMeld();
   // TODO: Should support a loading state, rather than defaulting to `[]`.
   const [todos, setTodos] = useState<ITodo[]>([]);
@@ -167,8 +172,6 @@ export default function Home() {
     }
   }, [meld]);
 
-  const nowShowing: string = ALL_TODOS;
-
   var activeTodoCount = todos.filter(
     (todo) => todo.status !== "COMPLETED"
   ).length;
@@ -176,9 +179,9 @@ export default function Home() {
 
   var shownTodos = todos.filter((todo) => {
     switch (nowShowing) {
-      case ACTIVE_TODOS:
+      case Filter.active:
         return !(todo.status === "COMPLETED");
-      case COMPLETED_TODOS:
+      case Filter.completed:
         return todo.status === "COMPLETED";
       default:
         return true;
@@ -272,6 +275,7 @@ export default function Home() {
           count={activeTodoCount}
           completedCount={completedCount}
           nowShowing={nowShowing}
+          setNowShowing={setNowShowing}
           onClearCompleted={(e) => {
             meld?.write({
               "@delete": todos
