@@ -16,9 +16,6 @@ const initialDataPromise = compact(
     "@context": {
       todomvc: "https://todomvc.com/vocab/",
       icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
-      "todomvc:items": {
-        "@container": "@list",
-      },
       "icaltzd:Vtodo": {
         "@context": {
           "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
@@ -58,11 +55,10 @@ export default function App({ Component, pageProps }: AppProps) {
       "@id": uuid(),
       "@domain": "m-ld-react.todomvc.com",
       genesis: true,
-      logLevel: "INFO",
+      logLevel: "DEBUG",
     });
 
     const writtenPromise = clonePromise.then(async (newMeld) => {
-      console.log(await initialDataPromise);
       await newMeld.write(await initialDataPromise);
       return newMeld;
     });

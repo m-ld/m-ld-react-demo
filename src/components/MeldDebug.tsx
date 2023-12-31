@@ -83,7 +83,9 @@ const QueryResults = ({ query }: { query: JsonValue }) => {
 
   useEffect(() => {
     if (meld) {
-      runQuery(meld, query).then(setQueryResults);
+      const doRead = async (state: MeldReadState) =>
+        runQuery(state, query).then(setQueryResults);
+      meld.read(doRead, (_update, state) => doRead(state));
     }
   }, [meld, query]);
 
@@ -133,14 +135,9 @@ const Turtle = ({ prefixes }: { prefixes?: N3.WriterOptions["prefixes"] }) => {
         setStream(state.match());
       };
 
-      const subscription = meld.read(
-        async (state) => {
-          streamQuads(state);
-        },
-        async (update, state) => {
-          streamQuads(state);
-        }
-      );
+      const subscription = meld.read(streamQuads, (_update, state) => {
+        streamQuads(state);
+      });
 
       return () => {
         subscription.unsubscribe();

@@ -1,77 +1,82 @@
 import { useMeld } from "@/hooks/useMeld";
-import { useSubject } from "@/hooks/useSubject";
-import { MeldClone } from "@m-ld/m-ld";
+import { MeldReadState } from "@m-ld/m-ld";
 import classNames from "classnames";
-import { useEffect, useState } from "react";
-import { JsonValue } from "type-fest";
+import { MouseEventHandler, useEffect, useState } from "react";
 import { query as runQuery } from "xql";
 import { z } from "zod";
 import { sortBy } from "lodash-es";
+import { compact } from "jsonld";
 
 const ALL_TODOS = "all";
 const ACTIVE_TODOS = "active";
 const COMPLETED_TODOS = "completed";
-const ENTER_KEY = 13;
-const ESCAPE_KEY = 27;
 
-interface ITodo {
-  id: string;
-  title: string;
-  completed: boolean;
-}
+// https://www.kanzaki.com/docs/ical/status.html
+const VTodoStatusEnum = z.enum([
+  "NEEDS-ACTION", //Indicates to-do needs action.
+  "COMPLETED", //Indicates to-do completed.
+  "IN-PROCESS", //Indicates to-do in process of
+  "CANCELLED", //Indicates to-do was cancelled.
+]);
+
+const TodoSchema = z.object({
+  id: z.string().url(),
+  title: z.string(),
+  status: VTodoStatusEnum,
+  order: z.number(),
+});
+
+type ITodo = z.infer<typeof TodoSchema>;
 
 interface ITodoItemProps {
-  key: string;
   todo: ITodo;
   editing?: boolean;
-  // onSave: (val: any) => void;
-  // onDestroy: () => void;
-  // onEdit: () => void;
-  // onCancel: (event: any) => void;
-  // onToggle: () => void;
 }
 
-const TodoItem = (props: ITodoItemProps) => (
-  <li
-    className={classNames({
-      completed: props.todo.completed,
-      editing: props.editing,
-    })}
-  >
-    <div className="view">
-      <input
-        className="toggle"
-        type="checkbox"
-        // checked={props.todo.completed}
-        // onChange={props.onToggle}
-      />
-      <label
-      // onDoubleClick={(e) => this.handleEdit()}
-      >
-        {props.todo.title}
-      </label>
-      {/* <button className="destroy" onClick={props.onDestroy} /> */}
-    </div>
-    <input
-      className="edit"
-      // value={this.state.editText}
-      // onBlur={(e) => this.handleSubmit(e)}
-      // onChange={(e) => this.handleChange(e)}
-      // onKeyDown={(e) => this.handleKeyDown(e)}
-    />
-  </li>
-);
+const TodoItem = (props: ITodoItemProps) => {
+  const meld = useMeld();
+
+  return (
+    <li
+      className={classNames({
+        completed: props.todo.status === "COMPLETED",
+        editing: props.editing,
+      })}
+    >
+      <div className="view">
+        <input
+          className="toggle"
+          type="checkbox"
+          checked={props.todo.status === "COMPLETED"}
+          onChange={(e) => {
+            meld?.write({
+              "@update": {
+                "@id": props.todo.id,
+                "http://www.w3.org/2002/12/cal/icaltzd#status": e.target.checked
+                  ? "COMPLETED"
+                  : "IN-PROCESS",
+              },
+            });
+          }}
+        />
+        <label>{props.todo.title}</label>
+        {/* <button className="destroy" onClick={props.onDestroy} /> */}
+      </div>
+      <input className="edit" />
+    </li>
+  );
+};
 
 interface ITodoFooterProps {
   completedCount: number;
-  // onClearCompleted: any;
+  onClearCompleted: MouseEventHandler<HTMLButtonElement>;
   nowShowing: string;
   count: number;
 }
 
 const TodoFooter = ({
   completedCount,
-  // onClearCompleted,
+  onClearCompleted,
   nowShowing,
   count,
 }: ITodoFooterProps) => (
@@ -106,39 +111,38 @@ const TodoFooter = ({
       </li>
     </ul>
     {!!completedCount && (
-      <button className="clear-completed" /* onClick={onClearCompleted} */>
+      <button className="clear-completed" onClick={onClearCompleted}>
         Clear completed
       </button>
     )}
   </footer>
 );
 
-const query = [
-  {
-    "@context": {
-      icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
-      todomvc: "https://todomvc.com/vocab/",
+const query = {
+  "@context": {
+    icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+    todomvc: "https://todomvc.com/vocab/",
 
-      id: "icaltzd:uid",
-      title: "icaltzd:summary",
-      completed: "icaltzd:status",
-      order: "todomvc:order",
-    },
-    id: "?",
-    title: "?",
-    completed: "?",
-    order: "?",
+    id: "@id",
+    title: "icaltzd:summary",
+    status: "icaltzd:status",
+    order: "todomvc:order",
   },
-];
+  "@id": "todoMVCList",
+  "@type": "todomvc:TodoList",
+  "todomvc:items": [
+    {
+      id: "?",
+      title: "?",
+      status: "?",
+      order: "?",
+    },
+  ],
+};
 
-const schema = z.array(
-  z.object({
-    id: z.string(),
-    title: z.string(),
-    completed: z.string().transform((status) => status === "COMPLETED"),
-    order: z.number(),
-  })
-);
+const QueryResultSchema = z.object({
+  "todomvc:items": z.array(TodoSchema),
+});
 
 export default function Home() {
   const meld = useMeld();
@@ -147,38 +151,93 @@ export default function Home() {
 
   useEffect(() => {
     if (meld) {
-      runQuery(meld, query).then((data) =>
-        setTodos(sortBy(schema.parse(data), (r) => r.order))
-      );
+      const doRead = async (state: MeldReadState) => {
+        await runQuery(state, query).then((data) => {
+          setTodos(
+            sortBy(
+              QueryResultSchema.parse(data)["todomvc:items"],
+              (r) => r.order
+            )
+          );
+        });
+      };
+      meld.read(doRead, (update, state) => {
+        return doRead(state);
+      });
     }
   }, [meld]);
 
   const nowShowing: string = ALL_TODOS;
 
-  var activeTodoCount = todos.filter((todo) => todo.completed).length;
+  var activeTodoCount = todos.filter(
+    (todo) => todo.status !== "COMPLETED"
+  ).length;
   var completedCount = todos.length - activeTodoCount;
 
   var shownTodos = todos.filter((todo) => {
     switch (nowShowing) {
       case ACTIVE_TODOS:
-        return !todo.completed;
+        return !(todo.status === "COMPLETED");
       case COMPLETED_TODOS:
-        return todo.completed;
+        return todo.status === "COMPLETED";
       default:
         return true;
     }
   });
 
+  const [newTodoSummary, setNewTodoSummary] = useState("");
+
   return (
     <div>
       <header className="header">
         <h1>todos</h1>
-        <input
-          className="new-todo"
-          placeholder="What needs to be done?"
-          // onKeyDown={(e) => this.handleNewTodoKeyDown(e)}
-          autoFocus={true}
-        />
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setNewTodoSummary("");
+            if (newTodoSummary.length > 0) {
+              meld?.write(
+                await compact(
+                  {
+                    "@context": {
+                      todomvc: "https://todomvc.com/vocab/",
+                      icaltzd: "http://www.w3.org/2002/12/cal/icaltzd#",
+                      "icaltzd:Vtodo": {
+                        "@context": {
+                          "@vocab": "http://www.w3.org/2002/12/cal/icaltzd#",
+                        },
+                      },
+                    },
+                    "@id": "todoMVCList",
+                    "todomvc:items": [
+                      {
+                        "@type": "icaltzd:Vtodo",
+                        status: "IN-PROCESS",
+                        summary: newTodoSummary,
+                        uid: crypto.randomUUID(),
+                        "todomvc:order": todos.length,
+                      },
+                    ],
+                  },
+                  {}
+                )
+              );
+            }
+          }}
+        >
+          <input
+            className="new-todo"
+            placeholder="What needs to be done?"
+            value={newTodoSummary}
+            onChange={(e) => setNewTodoSummary(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setNewTodoSummary("");
+              }
+            }}
+            autoFocus={true}
+          />
+        </form>
       </header>
       {!!todos.length && (
         <section className="main">
@@ -186,8 +245,18 @@ export default function Home() {
             id="toggle-all"
             className="toggle-all"
             type="checkbox"
-            // onChange={(e) => this.toggleAll(e)}
-            // checked={activeTodoCount === 0}
+            onChange={(e) => {
+              meld?.write({
+                "@update": todos.map((todo) => ({
+                  "@id": todo.id,
+                  "http://www.w3.org/2002/12/cal/icaltzd#status": e.target
+                    .checked
+                    ? "COMPLETED"
+                    : "IN-PROCESS",
+                })),
+              });
+            }}
+            checked={activeTodoCount === 0}
           />
           <label htmlFor="toggle-all">Mark all as complete</label>
           <ul className="todo-list">
@@ -203,7 +272,16 @@ export default function Home() {
           count={activeTodoCount}
           completedCount={completedCount}
           nowShowing={nowShowing}
-          // onClearCompleted={(e) => this.clearCompleted()}f
+          onClearCompleted={(e) => {
+            meld?.write({
+              "@delete": todos
+                .filter((todo) => todo.status === "COMPLETED")
+                .map((todo) => ({
+                  "@id": todo.id,
+                  "?": "?",
+                })),
+            });
+          }}
         />
       )}
     </div>
